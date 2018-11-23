@@ -1,0 +1,196 @@
+#include "../../../src/rtmpmodulelogger.h"
+#include "RtmpParser.hpp"
+#include "RtmpMessage.hpp"
+#include "control_message/ControlMessage.hpp"
+
+namespace rtmp_protocol {
+RtmpParser::RtmpParser()
+    : connection_id_(0),
+      parsing_state_(HEADER_PARSING),
+      readed_bytes_count_(0),
+      win_ack_size_(DEFAULT_WIN_ACK_SIZE),
+      next_ack_send_size_(DEFAULT_WIN_ACK_SIZE) {
+  payload_parser_.set_connection_id(connection_id_);
+  header_parser_.set_connection_id(connection_id_);
+}
+
+RtmpParser::RtmpParser(rtmp_network::MessageSender_wptr sender,
+                       unsigned int connection_id)
+    : rtmp_network::RequestParser(sender),
+      connection_id_(connection_id),
+      parsing_state_(HEADER_PARSING),
+      readed_bytes_count_(0),
+      win_ack_size_(DEFAULT_WIN_ACK_SIZE),
+      next_ack_send_size_(DEFAULT_WIN_ACK_SIZE) {
+  payload_parser_.set_connection_id(connection_id_);
+  header_parser_.set_connection_id(connection_id_);
+}
+
+boost::tribool RtmpParser::parse(std::istream& stream, size_t buf_size,
+                                 size_t& total_readed_size) {
+
+  boost::tribool result = parse_private(stream, buf_size, total_readed_size);
+  if (total_readed_size > 0) {
+    readed_bytes_count_ += total_readed_size;
+
+    // send ack
+    if (readed_bytes_count_ >= next_ack_send_size_) {
+      next_ack_send_size_ += win_ack_size_;
+      push_to_send_queue(
+          RtmpMessage_ptr(new Acknowledgement(readed_bytes_count_)));
+      signal_send_message();
+    }
+  }
+  return result;
+}
+
+// FIXME: 
+// when logging parsed payload here, its header info seems to be incomplete
+// seems different from when logged in parse_payload function
+boost::tribool RtmpParser::parse_private(std::istream& stream, size_t buf_size,
+                                         size_t& total_readed_size) {
+  total_readed_size = 0;
+
+  while (true) {
+    switch (parsing_state_) {
+      case HEADER_PARSING: {
+
+        if (buf_size == 0) { return boost::indeterminate; }
+
+        size_t readed_size = 0;
+        boost::tribool result = header_parser_.parse_header(stream, buf_size,
+                                                     readed_size);
+        if (result) {
+          buf_size -= readed_size;
+          total_readed_size += readed_size;
+
+          set_parsed_header(header_parser_.get_parsed_msg());
+          set_abs_timestamp(parsed_header_);
+
+          RTMPLOG(debug) << "connection_id:" << connection_id_
+                              << ",parsed header:"
+                              << parsed_header_->to_string();
+
+          parsing_state_ = PAYLOAD_PARSING;
+        } else if (result == false) {
+          RTMPLOG(error) << "parsing header fail";
+          return result;
+        } else {
+          RTMPLOG(debug) << "continue parsing header: current buf size:" << buf_size ;
+          return result;
+        }
+        
+        break;
+      }
+
+      case PAYLOAD_PARSING: {
+
+        if (buf_size == 0) { return boost::indeterminate; }
+
+        size_t readed_size = 0;
+        RtmpPayloadParseResult::type result = payload_parser_.parse_payload(
+            parsed_header_, stream, buf_size, readed_size);
+
+        if (result == RtmpPayloadParseResult::COMPLETE) {
+          buf_size -= readed_size;
+          total_readed_size += readed_size;
+
+          set_parsed_msg(payload_parser_.get_parsed_msg());
+
+          RTMPLOG(debug) << "connection_id:" << connection_id_
+                              << ",parsed payload:"
+                              << parsed_msg_->to_string();
+
+          if (parsed_msg_->get_class_name().compare("SetChunkSize") == 0) {
+            unsigned int chunk_size = boost::dynamic_pointer_cast<SetChunkSize>(
+                parsed_msg_)->chunk_size_;
+            payload_parser_.set_recv_chunk_size(chunk_size);
+            RTMPLOG(debug) << "connection_id:" << connection_id_
+                              << ",change recv chunk size:"
+                              << chunk_size;
+          } else if (parsed_msg_->get_class_name().compare(
+              "WindowAcknowledgementSize") == 0) {
+
+            unsigned int size = boost::dynamic_pointer_cast<
+                WindowAcknowledgementSize>(parsed_msg_)->window_size_;
+            set_win_ack_size(size);
+            RTMPLOG(debug) << "connection_id:" << connection_id_
+                              << ",change windows ack size:"
+                              << win_ack_size_;
+          }
+          parsing_state_ = COMPLETE;
+        } else if (result == RtmpPayloadParseResult::WAITING_NEXT_CHUNK) {
+          buf_size -= readed_size;
+          total_readed_size += readed_size;
+
+          //RTMPLOG(debug) << "result : WAITING_NEXT_CHUNK -> parsing state HEADER_PARSING after parsing payload"<< ",readed size: "<< readed_size << ",buf_size: " << buf_size << ",total readed size: " << total_readed_size;
+
+          parsing_state_ = HEADER_PARSING;
+          break;
+        } else if (result == RtmpPayloadParseResult::FAIL) {
+
+          RTMPLOG(error) << "connection_id:" << connection_id_ << ",error occurred in parsing payload.";
+          return false;
+        } else if (result
+            == RtmpPayloadParseResult::WAITING_MORE_PAYLOAD_DATA) {
+
+          //RTMPLOG(debug) << "result : RtmpPayloadParseResult::WAITING_MORE_PAYLOAD_DATA -> return indeterminate after parsing payload";
+
+          return boost::indeterminate;
+        }
+        break;
+      }
+      case COMPLETE: {
+        parsing_state_ = HEADER_PARSING;
+        return true;
+      }
+      default:
+        RTMPLOG(error) << "connection_id:" << connection_id_
+                           << ",invalid parse state.";
+        break;
+    }
+  }
+  return false;
+}
+
+void RtmpParser::set_win_ack_size(unsigned int size) {
+  next_ack_send_size_ -= win_ack_size_;
+  win_ack_size_ = size;
+  next_ack_send_size_ += win_ack_size_;
+}
+
+rtmp_network::Message_ptr RtmpParser::get_parsed_message() {
+  return parsed_msg_;
+}
+
+void RtmpParser::reset() {
+  parsed_header_.reset();
+}
+
+void RtmpParser::set_abs_timestamp(RtmpHeader_ptr header) {
+  // TODO: set_abs_timestamp implement
+//  stream_info_map::const_iterator stream_info_iter;
+//  stream_info_ptr cur_stream_info;
+//  stream_info_iter = stream_infos_.find(header->chunk_stream_id_);
+//
+//  if (stream_info_iter == stream_infos_.end()) {
+//    if (header->is_first_msg_chunk() || header->is_first_stream_chunk()) {
+//      cur_stream_info = stream_info_ptr(new stream_info);
+//      cur_stream_info->last_msg_header = header;
+//      if (header->is_first_stream_chunk())
+//        cur_stream_info->first_stream_header = header;
+//    }
+//  }
+}
+void RtmpParser::set_parsed_msg(RtmpMessage_ptr msg) {
+  parsed_msg_.reset();
+  parsed_msg_ = msg;
+}
+
+void RtmpParser::set_parsed_header(RtmpHeader_ptr header) {
+  parsed_header_.reset();
+  parsed_header_ = header;
+}
+
+}  // namespace rtmp_protocol
+

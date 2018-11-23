@@ -1,0 +1,5 @@
+/data/project/git/alexrtmp/alexrtmpd_source/workspace/rtmpserver_lib/build/CMakeFiles/rebuild_cache.dir
+/data/project/git/alexrtmp/alexrtmpd_source/workspace/rtmpserver_lib/build/CMakeFiles/edit_cache.dir
+/data/project/git/alexrtmp/alexrtmpd_source/workspace/rtmpserver_lib/build/src/CMakeFiles/rebuild_cache.dir
+/data/project/git/alexrtmp/alexrtmpd_source/workspace/rtmpserver_lib/build/src/CMakeFiles/rtmp-server.dir
+/data/project/git/alexrtmp/alexrtmpd_source/workspace/rtmpserver_lib/build/src/CMakeFiles/edit_cache.dir
