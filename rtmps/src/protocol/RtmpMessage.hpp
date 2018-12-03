@@ -56,20 +56,16 @@ class RtmpMessageType {
 };
 
 class RtmpMessage : public rtmp_network::Message {
- private:
+private:
   RtmpHeader_ptr header_ptr_;
   RtmpMessageType::type msg_type_;
   unsigned int write_chunk_size_;
+  
+public:
+  RtmpMessage();
+  RtmpMessage(RtmpHeader_ptr header);
+  virtual ~RtmpMessage() {}
 
- public:
-  RtmpMessage() {
-    header_ptr_ = RtmpHeader_ptr(new RtmpHeader());
-  }
-  RtmpMessage(RtmpHeader_ptr header)
-      : header_ptr_(header) {
-  }
-  virtual ~RtmpMessage() {
-  }
   virtual std::string get_class_name() {
     return "RtmpMessage";
   }
@@ -98,6 +94,7 @@ class RtmpMessage : public rtmp_network::Message {
   unsigned int timestamp_delta_;
 
   long long abs_timestamp_;  // not used for network data
+  std::size_t id_;
 
   unsigned int chunk_stream_id() {
     return header_ptr_->chunk_stream_id_;

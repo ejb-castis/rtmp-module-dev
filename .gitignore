@@ -1,0 +1,16 @@
+.vscode/
+build*/
+cppcheck-result.xml
+cpplint-result.txt
+*.idx
+*.pyc
+data/
+doc/config-sample/
+tool/hlsclient/hlsclient
+tool/hlsclient/debug
+tool/dashclient/dashclient
+tool/dashclient/debug
+tool/session-generator/session-generator
+tool/session-generator/debug
+tool/dummy-ts-uploader/dummy-ts-uploader
+tool/dummy-ts-uploader/debug

@@ -72,6 +72,7 @@ class RtmpHeader {
   unsigned int timestamp_delta_;
 
   long long abs_timestamp_;  // not used for network data
+  std::size_t message_id_{0};
 
   RtmpHeader() {
     reset();
@@ -85,6 +86,7 @@ class RtmpHeader {
     msg_stream_id_ = other->msg_stream_id_;
     timestamp_delta_ = other->timestamp_delta_;
     abs_timestamp_ = other->abs_timestamp_;
+    message_id_ = other->message_id_;
   }
   virtual ~RtmpHeader() {
   }
@@ -98,6 +100,7 @@ class RtmpHeader {
     msg_stream_id_ = 0;
     timestamp_delta_ = 0;
     abs_timestamp_ = 0;
+    message_id_=0;
   }
 
   bool has_msg_len_and_type() {

@@ -26,6 +26,7 @@ std::string RtmpHeader::to_string() {
     oss << ",msg_stream_id:" << msg_stream_id_;
   }
   oss << ",abs_timestamp:" << abs_timestamp_;
+  oss << ",message_id:" << message_id_;
 
   return oss.str();
 }

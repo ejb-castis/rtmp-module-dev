@@ -35,6 +35,7 @@ protocol/media_message/MediaMsgParser.cpp
 protocol/AMF0Serializer.cpp
 protocol/RtmpHeader.cpp
 protocol/RtmpHeaderParser.cpp
+protocol/RtmpMessage.cpp
 protocol/RtmpParser.cpp
 protocol/RtmpPayloadParser.cpp
 )
