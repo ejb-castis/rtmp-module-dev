@@ -254,7 +254,10 @@ boost::tribool RtmpHeaderParser::parse_chunk_header_type2(std::istream& stream,
     timestamp_delta = network_util::ntoh_3(timestamp_delta);
 
     parsed_msg_->timestamp_delta_ = timestamp_delta;
-    parsing_state_ = COMPLETE;
+
+    parsing_state_ =
+            (parsed_msg_->timestamp_delta_ == 0x00FFFFFF) ? EXTENDED_TIMESTAMP : COMPLETE;
+
     readed_size = 3;
     return true;
   } else
