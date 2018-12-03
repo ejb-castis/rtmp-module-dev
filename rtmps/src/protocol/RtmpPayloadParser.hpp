@@ -67,6 +67,7 @@ class RtmpPayloadParser {
     unsigned int last_msg_len;
     RtmpHeaderMsgTypeId::type last_msg_type_id;
     unsigned int last_msg_timestamp;
+    unsigned int last_msg_timestamp_delta;
   } channel_info;
 
   channel_info channels_[MAX_CHANNEL_COUNT];

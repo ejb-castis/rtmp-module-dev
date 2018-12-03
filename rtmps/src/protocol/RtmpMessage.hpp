@@ -71,7 +71,11 @@ public:
   }
   virtual std::string to_string() {
     std::ostringstream oss;
-    oss << "header:" << get_header()->to_string();
+    oss << "id[" << id_ <<"],";
+    oss << "timestamp[" << header_ptr_->timestamp_ <<"],";
+    oss << "type[" << header_ptr_->msg_type_id_ <<"],";
+    oss << "length[" << header_ptr_->msg_length_ <<"],";
+    oss << "header[" << get_header()->to_string() <<"]";
     return oss.str();
   }
   // return value : writed bytes count in stream

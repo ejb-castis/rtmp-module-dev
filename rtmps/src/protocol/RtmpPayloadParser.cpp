@@ -32,6 +32,7 @@ RtmpPayloadParseResult::type RtmpPayloadParser::parse_payload(RtmpHeader_ptr hea
     // TODO:
     // 같은 chunk 에 대해서 message stream id 가 다른 0 type 이 하나 더 왔을 때, 이전 정보를 덮어쓰게 될 텐데... 괜찮을까?
     // 즉, message stream id 에 대한 정보가 없어도 될까? 
+    // message header type 0 과 message header type `의 경우, 
     if (recv_info->first_chunk_header->has_msg_len_and_type()) {
       channels_[cs_id].last_msg_len = recv_info->first_chunk_header->msg_length_;
       channels_[cs_id].last_msg_type_id = recv_info->first_chunk_header->msg_type_id_;
@@ -42,6 +43,40 @@ RtmpPayloadParseResult::type RtmpPayloadParser::parse_payload(RtmpHeader_ptr hea
 
     recv_info->recv_buf = new unsigned char[recv_info->first_chunk_header->msg_length_];
     recv_info->recv_length = 0;
+
+    // timestamp 계산
+    if (recv_info->first_chunk_header->format_type_ == RtmpHeaderFormat::FULL) {
+      if (recv_info->first_chunk_header->timestamp_delta_ != 0 ) { 
+        RTMPLOGF(warning, "timestamp delta of message header(type0) is not zero. header[%1%]", recv_info->first_chunk_header->to_string()); }
+
+      channels_[cs_id].last_msg_timestamp_delta = recv_info->first_chunk_header->timestamp_delta_;
+      channels_[cs_id].last_msg_timestamp = recv_info->first_chunk_header->timestamp_;
+
+
+    }
+    else if (recv_info->first_chunk_header->format_type_ == RtmpHeaderFormat::SAME_STREAM) {
+      channels_[cs_id].last_msg_timestamp_delta = recv_info->first_chunk_header->timestamp_delta_;
+      channels_[cs_id].last_msg_timestamp += channels_[cs_id].last_msg_timestamp_delta;
+
+      recv_info->first_chunk_header->timestamp_ = channels_[cs_id].last_msg_timestamp;
+    }
+    else if (recv_info->first_chunk_header->format_type_ == RtmpHeaderFormat::SAME_LENGTH_AND_STREAM) {
+      channels_[cs_id].last_msg_timestamp_delta = recv_info->first_chunk_header->timestamp_delta_;
+      channels_[cs_id].last_msg_timestamp += channels_[cs_id].last_msg_timestamp_delta;
+
+      recv_info->first_chunk_header->timestamp_ = channels_[cs_id].last_msg_timestamp;
+    }
+    else if (recv_info->first_chunk_header->format_type_ == RtmpHeaderFormat::CONTINUATION) {
+      if (channels_[cs_id].last_msg_timestamp_delta == 0 ) { 
+        RTMPLOGF(warning, "preceding timestamp delta is zero for new message. header[%1%]", recv_info->first_chunk_header->to_string()); }
+
+      recv_info->first_chunk_header->timestamp_delta_ = channels_[cs_id].last_msg_timestamp_delta;
+      channels_[cs_id].last_msg_timestamp_delta = recv_info->first_chunk_header->timestamp_delta_;
+      channels_[cs_id].last_msg_timestamp += channels_[cs_id].last_msg_timestamp_delta;
+     
+      recv_info->first_chunk_header->timestamp_ = channels_[cs_id].last_msg_timestamp;
+    }
+
   } else {
     recv_info = recv_info_iter->second;
 
@@ -90,6 +125,7 @@ RtmpPayloadParseResult::type RtmpPayloadParser::parse_payload(RtmpHeader_ptr hea
 
 // msg complete
   if (this_msg_size == need_size) {
+
     // detail parsing
     std::string str_buf(reinterpret_cast<const char*>(recv_info->recv_buf),
                         msg_length);
@@ -122,6 +158,8 @@ RtmpPayloadParseResult::type RtmpPayloadParser::parse_payload(RtmpHeader_ptr hea
     } else {
       parse_unknown_message(first_header, payload_stream, msg_length);
     }
+
+    RTMPLOGF(report, "message[%1%]", parsed_msg_->to_string());
 
     delete[] recv_info->recv_buf;
     incomplete_infos_.erase(cs_id);
