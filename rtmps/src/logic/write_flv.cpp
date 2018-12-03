@@ -4,14 +4,21 @@
 #include <fstream>
 #include <algorithm>
 #include <boost/bind/bind.hpp>
+#include <boost/filesystem/path.hpp>
+#include <boost/filesystem/fstream.hpp>
+#include <boost/filesystem/operations.hpp>
+
 #include "../../../src/rtmpmodulelogger.h"
 
 namespace rtmp_logic {
 
 using namespace rtmp_protocol;
 
-void write_flv_header() {
-  std::string flv_file_name = "dump.flv";
+void write_flv_header(const std::string& flv_file_name) {
+  
+  boost::filesystem::path file_path("dump");
+  boost::filesystem::create_directories(file_path);
+
   std::ofstream flvfile(flv_file_name, std::ios::binary | std::ofstream::out | std::ofstream::app );
 
   static u_char flv_header[] = {
@@ -35,10 +42,38 @@ void write_flv_header() {
   flvfile.close();
 }
 
-void write_flv(MediaMessage_ptr& request) {
+void write_flv_audio_dump(const char* data, std::size_t length) {
   static int audio_index = 0;
+  ++audio_index;
+
+  boost::filesystem::path file_path("dump/audio");
+  boost::filesystem::create_directories(file_path);
+
+  std::string flv_file_name = "dump/audio/audio.dump." + std::to_string(audio_index);
+  std::ofstream flvfile(flv_file_name, std::ios::binary | std::ofstream::out | std::ofstream::app );
+
+  flvfile.write(data, length);
+  flvfile.flush();
+  flvfile.close();  
+}
+void write_flv_video_dump(const char* data, std::size_t length) {
   static int video_index = 0;
 
+  boost::filesystem::path file_path("dump/video");
+  boost::filesystem::create_directories(file_path);
+
+  ++video_index;
+  std::string flv_file_name = "dump/video/video.dump." + std::to_string(video_index);
+  std::ofstream flvfile(flv_file_name, std::ios::binary | std::ofstream::out | std::ofstream::app );
+
+  flvfile.write(data, length);
+  flvfile.flush();
+  flvfile.close();
+}
+
+
+void write_flv(MediaMessage_ptr& request) {
+  
   static bool write_audio_header_done = false;
   static bool write_video_header_done = false;
   static bool write_flv_header_done = false;
@@ -51,10 +86,12 @@ void write_flv(MediaMessage_ptr& request) {
   switch(publish_type) {
     case PublishType::record: {
 
+      std::string flv_file_name = "dump/dump.flv";
+
       if (write_flv_header_done == false) {
           write_flv_header_done = true;    
 
-          write_flv_header();
+          write_flv_header(flv_file_name);
         }
 
 
@@ -107,7 +144,6 @@ void write_flv(MediaMessage_ptr& request) {
         // tag size = header size + data size
         tag_size = (ph - hdr) + request->get_header()->msg_length_;
 
-        std::string flv_file_name = "dump.flv";
         std::ofstream flvfile(flv_file_name, std::ios::binary | std::ofstream::out | std::ofstream::app );
 
         // write tag header
@@ -115,6 +151,8 @@ void write_flv(MediaMessage_ptr& request) {
 
         // write content        
         flvfile.write(reinterpret_cast<const char*>(request->get_data().get()), request->get_data_len());
+
+        write_flv_audio_dump(reinterpret_cast<const char*>(request->get_data().get()), request->get_data_len());
 
         // write tag footer
         ph = hdr;
@@ -135,7 +173,7 @@ void write_flv(MediaMessage_ptr& request) {
         if (write_flv_header_done == false) {
           write_flv_header_done = true;    
 
-          write_flv_header();  
+          write_flv_header(flv_file_name);
         }
 
         if (write_video_header_done == false) {
@@ -170,7 +208,6 @@ void write_flv(MediaMessage_ptr& request) {
 
         tag_size = (ph - hdr) + request->get_header()->msg_length_;
 
-        std::string flv_file_name = "dump.flv";
         std::ofstream flvfile(flv_file_name, std::ios::binary | std::ofstream::out | std::ofstream::app );
 
         // write tag header
@@ -178,6 +215,8 @@ void write_flv(MediaMessage_ptr& request) {
 
         // write content
         flvfile.write(reinterpret_cast<const char*>(request->get_data().get()), request->get_data_len());
+
+        write_flv_video_dump(reinterpret_cast<const char*>(request->get_data().get()), request->get_data_len());
 
         ph = hdr;
         p = (u_char*)&tag_size;
@@ -206,4 +245,9 @@ void write_flv(MediaMessage_ptr& request) {
   }
 }
 
+
+
+
+
 } // end of rtmp_logic
+
