@@ -16,6 +16,7 @@ common/TimeUtil.cpp
 logic/RtmpHandler.cpp
 logic/RtmpStream.cpp
 logic/StreamManager.cpp
+logic/write_flv.cpp
 network/Connection.cpp
 network/HandshakeManager.cpp
 network/Server.cpp
@@ -51,6 +52,7 @@ common/TimeUtil.hpp
 logic/RtmpHandler.hpp
 logic/RtmpStream.hpp
 logic/StreamManager.hpp
+logic/write_flv.h
 network/Connection.hpp
 network/HandshakeManager.hpp
 network/Message.hpp

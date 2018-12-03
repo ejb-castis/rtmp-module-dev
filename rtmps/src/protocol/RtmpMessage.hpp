@@ -69,15 +69,7 @@ public:
   virtual std::string get_class_name() {
     return "RtmpMessage";
   }
-  virtual std::string to_string() {
-    std::ostringstream oss;
-    oss << "id[" << id_ <<"],";
-    oss << "timestamp[" << header_ptr_->timestamp_ <<"],";
-    oss << "type[" << header_ptr_->msg_type_id_ <<"],";
-    oss << "length[" << header_ptr_->msg_length_ <<"],";
-    oss << "header[" << get_header()->to_string() <<"]";
-    return oss.str();
-  }
+  virtual std::string to_string();
   // return value : writed bytes count in stream
   virtual size_t write_payload(std::ostream& stream) {
     return 0;
