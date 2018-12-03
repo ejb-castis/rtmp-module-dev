@@ -280,7 +280,19 @@ boost::tribool RtmpHeaderParser::parse_extended_timestamp(std::istream& stream,
 
     timestamp = network_util::ntoh_4(timestamp);
 
-    parsed_msg_->timestamp_ = timestamp;
+    if (parsed_msg_->format_type_ == RtmpHeaderFormat::FULL) {
+      parsed_msg_->timestamp_ = timestamp;
+    }
+    else if (parsed_msg_->format_type_ == RtmpHeaderFormat::SAME_STREAM) {
+      parsed_msg_->timestamp_delta_ = timestamp;
+    }
+    else if (parsed_msg_->format_type_ == RtmpHeaderFormat::SAME_LENGTH_AND_STREAM) {
+      parsed_msg_->timestamp_delta_ = timestamp;
+    }
+    else if (parsed_msg_->format_type_ == RtmpHeaderFormat::CONTINUATION) {
+      return false;
+    }
+    
     parsing_state_ = COMPLETE;
     readed_size = 4;
     return true;
