@@ -14,6 +14,16 @@ namespace rtmp_logic {
 
 using namespace rtmp_protocol;
 
+void write_4byte(uint32_t value, char*& dst) {
+    *dst = (value & 0xff000000) >> 24; ++dst;
+    *dst = (value & 0x00ff0000) >> 16; ++dst;
+    *dst = (value & 0x0000ff00) >>  8; ++dst;
+    *dst = (value & 0x000000ff)      ; ++dst;
+}
+void write_1byte(uint8_t value, char*& dst) {
+    *dst = value; ++dst;
+}
+
 void write_flv_header(const std::string& flv_file_name) {
   
   boost::filesystem::path file_path("dump");
@@ -71,6 +81,32 @@ void write_flv_video_dump(const char* data, std::size_t length) {
   flvfile.close();
 }
 
+void write_flv_media_dump(MediaMessage_ptr& request) {
+  static unsigned int media_index = 0;
+
+  const char* data =  reinterpret_cast<const char*>(request->get_data().get());
+  std::size_t data_length = request->get_data_len();
+
+  char header[9];
+  char* header_ptr = header;
+  std::size_t header_length = 1 + 4 + 4;
+
+  write_1byte(request->get_header()->msg_type_id_, header_ptr);  
+  write_4byte(request->get_header()->timestamp_, header_ptr);  
+  write_4byte(request->get_header()->msg_length_, header_ptr);  
+
+  boost::filesystem::path file_path("dump/flv_es");
+  boost::filesystem::create_directories(file_path);
+  ++media_index;
+
+  std::string flv_file_name = "dump/flv_es/flv_es.dump." + std::to_string(media_index);
+  std::ofstream flvfile(flv_file_name, std::ios::binary | std::ofstream::out | std::ofstream::app );
+
+  flvfile.write(header, header_length);
+  flvfile.write(data, data_length);
+  flvfile.flush();
+  flvfile.close();  
+}
 
 void write_flv(MediaMessage_ptr& request) {
   
@@ -80,7 +116,7 @@ void write_flv(MediaMessage_ptr& request) {
   static uint32_t video_timestamp_delta = 0;
   static uint32_t audio_timestamp_delta = 0;
 
-  //StreamManager& mgr = StreamManager::get_instance();
+  write_flv_media_dump(request);
 
   auto publish_type = PublishType::record;
   switch(publish_type) {
@@ -91,7 +127,7 @@ void write_flv(MediaMessage_ptr& request) {
       if (write_flv_header_done == false) {
           write_flv_header_done = true;    
 
-          write_flv_header(flv_file_name);
+          write_flv_header(flv_file_name);   
         }
 
 
@@ -166,7 +202,9 @@ void write_flv(MediaMessage_ptr& request) {
 
         flvfile.flush();
         flvfile.close();
-     
+
+        
+
 
       } else if (request->get_header()->is_video_msg()) {
 

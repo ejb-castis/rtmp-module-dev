@@ -1,3 +1,266 @@
+#2018-12-07
+
+server 가 발급하는 id 로 chunkstream id 가 정해진다.
+NEW_STREAM_ID
+
+
+#2018-12-04
+
+
+```
+   frame 
+       -----> decoder -----> display device -----> screen
+                ^                   ^  
+                |                   |
+               DTS                 PTS
+                |                   |
+                |<----------------->|
+               
+                Compsition time offset
+
+flv.timestamp = DTS / 90 in millisec
+flv.composition_time_offset = ( PTS - DTS ) / 90 in millisec
+
+b-frame needs time because b-frame requires more following frames 
+
+? :
+  PTS and CTS (Composition Time Stamp) are the same ? 
+
+
+
+ref:
+https://stackoverflow.com/questions/7054954/the-composition-timects-when-wrapping-h-264-nalus
+```
+
+
+#2018-12-04
+
+
+nginx 의 코드 상으로는 
+
+ngx_rtmp_codec_module.c의
+ngx_rtmp_codec_av() 
+ngx_rtmp_codec_parse_avc_header()
+static ngx_int_t
+ngx_rtmp_codec_postconfiguration(ngx_conf_t *cf)
+{
+    ngx_rtmp_core_main_conf_t          *cmcf;
+    ngx_rtmp_handler_pt                *h;
+    ngx_rtmp_amf_handler_t             *ch;
+
+    cmcf = ngx_rtmp_conf_get_module_main_conf(cf, ngx_rtmp_core_module);
+
+    h = ngx_array_push(&cmcf->events[NGX_RTMP_MSG_AUDIO]);
+    *h = ngx_rtmp_codec_av;
+
+    h = ngx_array_push(&cmcf->events[NGX_RTMP_MSG_VIDEO]);
+    *h = ngx_rtmp_codec_av;
+
+    h = ngx_array_push(&cmcf->events[NGX_RTMP_DISCONNECT]);
+    *h = ngx_rtmp_codec_disconnect;
+
+    /* register metadata handler */
+    ch = ngx_array_push(&cmcf->amf);
+    if (ch == NULL) {
+        return NGX_ERROR;
+    }
+    ngx_str_set(&ch->name, "@setDataFrame");
+    ch->handler = ngx_rtmp_codec_meta_data;
+
+    ch = ngx_array_push(&cmcf->amf);
+    if (ch == NULL) {
+        return NGX_ERROR;
+    }
+    ngx_str_set(&ch->name, "onMetaData");
+    ch->handler = ngx_rtmp_codec_meta_data;
+
+
+    return NGX_OK;
+}
+
+
+
+등이 관련이 있는 듯
+
+
+
+https://www.adobe.com/content/dam/acom/en/devnet/flv/video_file_format_spec_v10_1.pdf
+
+audio dump : aac 
+audio header : 2 byte
+aac type 인 경우 AF 00 or AF 01
+
+xxd -b audio.dump.1
+00000000: 10101111 00000000 00010001 10010000 01010110 11100101  ....V.
+00000006: 00000000                                               .
+
+hd audio.dump.1
+00000000  af 00 11 90 56 e5 00                              |....V..|
+00000007
+
+video dump: h.264
+video header : 5byte (17 00 00 00 00) 
+
+frameType : 1 : key frame for AVC (1:key, 2:inter, etc)
+codecId : 7 : AVC  
+AVCPacketType : 0 : AVC sequence header (0:header of seq , 1: NANU, 2:end of seq )
+compositionTime : 0 0 0 : timeoffset (3byte big endian)
+
+hd -n 100 video.dump.1 
+00000000  17 00 00 00 00 01 64 00  28 ff e1 00 29 67 64 00  |......d.(...)gd.|
+00000010  28 ac d9 40 78 04 4f de  03 6a 02 02 02 80 00 01  |(..@x.O..j......|
+00000020  f4 80 00 75 30 71 10 00  09 89 68 00 05 16 17 af  |...u0q....h.....|
+00000030  7c 07 16 86 0a 96 01 00  05 68 ff b5 25 00        ||........h..%.|
+0000003e
+
+xxd -l 100 -b video.dump.1
+00000000: 00010111 00000000 00000000 00000000 00000000 00000001  ......
+00000006: 01100100 00000000 00101000 11111111 11100001 00000000  d.(...
+0000000c: 00101001 01100111 01100100 00000000 00101000 10101100  )gd.(.
+00000012: 11011001 01000000 01111000 00000100 01001111 11011110  .@x.O.
+00000018: 00000011 01101010 00000010 00000010 00000010 10000000  .j....
+0000001e: 00000000 00000001 11110100 10000000 00000000 01110101  .....u
+00000024: 00110000 01110001 00010000 00000000 00001001 10001001  0q....
+0000002a: 01101000 00000000 00000101 00010110 00010111 10101111  h.....
+00000030: 01111100 00000111 00010110 10000110 00001010 10010110  |.....
+00000036: 00000001 00000000 00000101 01101000 11111111 10110101  ...h..
+0000003c: 00100101 00000000                                      %.
+
+
+mp3, flv1 의경우
+
+audio header 1 byte 로 2f 인 것으로 보이고
+video header 1 byte 는 12 또는 22 인 것으로 보입니다.
+
+
+ffmpeg option 조정
+
+option 을 정하지 않으면, 
+
+audio 는 mp3 로 video 는 flv1 으로 re-encoding 되는 것 같습니다.
+audio codec 를 ac3 로 설정해보니, flv는 지원안되다는 메시지가 나옵니다.
+
+찾아보니 option 을 조정해서, rtmp 로 보낼 수 있었습니다.
+
+ffmpeg -re -i /data/movie/20181130104010.mp4 -acodec aac -vcodec copy -f flv rtmp://127.0.0.1:1935/live/stream
+
+
+https://trac.ffmpeg.org/wiki/StreamingGuide
+
+-re : 
+  read input at native frame rate. mainly used to simulate a grab device. 
+  i.e. if you wnated to stream a video file, then you would want to use this, otherwise it might stream it too fast ( it attemps to stream at line spped by default). you typically don't want to use this flag when streaming from a live device.
+
+-acodec aac :
+  sets the audio codec
+
+-vcodec copy :
+  set the video codec as it is as of the input file. stream is not to be re-encoded.
+
+-f flv : 
+  deliver the output stream in an flv wrapper
+
+참고 : 
+  > ffmpeg -re -i /data/movie/20181130104010.mp4 -acodec aac -vcodec copy -f flv rtmp://127.0.0.1:1935/live/stream
+
+Input #0, mov,mp4,m4a,3gp,3g2,mj2, from '/data/movie/20181130104010.mp4':
+  Metadata:
+    major_brand     : isom
+    minor_version   : 512
+    compatible_brands: isomiso2avc1mp41
+    encoder         : Lavf58.22.100
+  Duration: 00:00:03.00, start: 0.000000, bitrate: 10482 kb/s
+    Stream #0:0(und): Video: h264 (High) (avc1 / 0x31637661), yuv420p(tv, bt709), 1920x1080 [SAR 1:1 DAR 16:9], 10095 kb/s, 29.97 fps, 29.97 tbr, 90k tbn, 59.94 tbc (default)
+    Metadata:
+      handler_name    : VideoHandler
+    Stream #0:1(kor): Audio: ac3 (ac-3 / 0x332D6361), 48000 Hz, stereo, fltp, 384 kb/s (default)
+    Metadata:
+      handler_name    : SoundHandler
+    Side data:
+      audio service type: main
+Stream mapping:
+  Stream #0:0 -> #0:0 (copy)
+  Stream #0:1 -> #0:1 (ac3 (native) -> aac (native))
+Press [q] to stop, [?] for help
+Output #0, flv, to 'rtmp://127.0.0.1:1935/live/stream':
+  Metadata:
+    major_brand     : isom
+    minor_version   : 512
+    compatible_brands: isomiso2avc1mp41
+    encoder         : Lavf57.83.100
+    Stream #0:0(und): Video: h264 (High) ([7][0][0][0] / 0x0007), yuv420p(tv, bt709), 1920x1080 [SAR 1:1 DAR 16:9], q=2-31, 10095 kb/s, 29.97 fps, 29.97 tbr, 1k tbn, 90k tbc (default)
+    Metadata:
+      handler_name    : VideoHandler
+    Stream #0:1(kor): Audio: aac (LC) ([10][0][0][0] / 0x000A), 48000 Hz, stereo, fltp, 128 kb/s (default)
+    Metadata:
+      handler_name    : SoundHandler
+      encoder         : Lavc57.107.100 aac
+    Side data:
+      audio service type: main
+
+  >ffplay dump.flv
+
+  Input #0, flv, from 'dump.flv':    0KB vq=    0KB sq=    0B f=0/0   
+  Duration: 00:00:02.95, start: 0.000000, bitrate: 10289 kb/s
+    Stream #0:0: Video: h264 (High), yuv420p(tv, bt709, top first), 1920x1080 [SAR 1:1 DAR 16:9], 30.30 fps, 29.97 tbr, 1k tbn, 59.94 tbc
+    Stream #0:1: Audio: aac (LC), 48000 Hz, stereo, fltp
+
+참고 : 
+  > ffmpeg -re -i /data/movie/20181130104010.mp4 -f flv rtmp://127.0.0.1:1935/live/stream
+
+  Input #0, mov,mp4,m4a,3gp,3g2,mj2, from '/data/movie/20181130104010.mp4':
+  Metadata:
+    major_brand     : isom
+    minor_version   : 512
+    compatible_brands: isomiso2avc1mp41
+    encoder         : Lavf58.22.100
+  Duration: 00:00:03.00, start: 0.000000, bitrate: 10482 kb/s
+    Stream #0:0(und): Video: h264 (High) (avc1 / 0x31637661), yuv420p(tv, bt709), 1920x1080 [SAR 1:1 DAR 16:9], 10095 kb/s, 29.97 fps, 29.97 tbr, 90k tbn, 59.94 tbc (default)
+    Metadata:
+      handler_name    : VideoHandler
+    Stream #0:1(kor): Audio: ac3 (ac-3 / 0x332D6361), 48000 Hz, stereo, fltp, 384 kb/s (default)
+    Metadata:
+      handler_name    : SoundHandler
+    Side data:
+      audio service type: main
+  Stream mapping:
+    Stream #0:0 -> #0:0 (h264 (native) -> flv1 (flv))
+    Stream #0:1 -> #0:1 (ac3 (native) -> mp3 (libmp3lame))
+  Press [q] to stop, [?] for help
+  
+  Output #0, flv, to 'rtmp://127.0.0.1:1935/live/stream':
+  Metadata:
+    major_brand     : isom
+    minor_version   : 512
+    compatible_brands: isomiso2avc1mp41
+    encoder         : Lavf57.83.100
+    Stream #0:0(und): Video: flv1 (flv) ([2][0][0][0] / 0x0002), yuv420p, 1920x1080 [SAR 1:1 DAR 16:9], q=2-31, 200 kb/s, 29.97 fps, 1k tbn, 29.97 tbc (default)
+    Metadata:
+      handler_name    : VideoHandler
+      encoder         : Lavc57.107.100 flv
+    Side data:
+      cpb: bitrate max/min/avg: 0/0/200000 buffer size: 0 vbv_delay: -1
+    Stream #0:1(kor): Audio: mp3 (libmp3lame) ([2][0][0][0] / 0x0002), 48000 Hz, stereo, fltp (default)
+    Metadata:
+      handler_name    : SoundHandler
+      encoder         : Lavc57.107.100 libmp3lame
+    Side data:
+      audio service type: main
+
+  >ffplay dump.flv
+  
+  Input #0, flv, from 'dump.flv':    0KB vq=    0KB sq=    0B f=0/0   
+  Duration: 00:00:02.98, start: 0.000000, bitrate: 5440 kb/s
+    Stream #0:0: Video: flv1, yuv420p, 1920x1080, 29.97 fps, 29.97 tbr, 1k tbn
+    Stream #0:1: Audio: mp3, 48000 Hz, stereo, s16p, 128 kb/s
+
+
+
+
+
+
+
+
 # 2018-11-23
 
 ## basic header, 1,2,3 byte
