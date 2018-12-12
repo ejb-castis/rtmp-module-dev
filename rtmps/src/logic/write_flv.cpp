@@ -139,7 +139,7 @@ void write_flv(MediaMessage_ptr& request) {
           audio_timestamp_delta = 0; // 0 - first timestamp of the first audio message 
         }
 
-        // refer to adobe's flv tag definition and nginx rtmp module
+        // refer to adobe's flv tag definition and etc.
         u_char                      hdr[11], *p, *ph;
         uint32_t                    timestamp_in_mill, tag_size;
 
