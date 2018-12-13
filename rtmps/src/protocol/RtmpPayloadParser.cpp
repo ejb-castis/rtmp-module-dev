@@ -7,11 +7,6 @@ RtmpPayloadParser::RtmpPayloadParser()
     : recv_chunk_size_(128) {
 }
 
-// TODO:
-// code review
-// chunk header type 2, 3 need to refer to the msg_stream_Id of the previous chunk header 
-// no code for managing and using timestamp ??
-
 RtmpPayloadParseResult::type RtmpPayloadParser::parse_payload(RtmpHeader_ptr header_ptr,
                                                       std::istream& stream,
                                                       size_t buf_size,
@@ -27,12 +22,8 @@ RtmpPayloadParseResult::type RtmpPayloadParser::parse_payload(RtmpHeader_ptr hea
   if (recv_info_iter == incomplete_infos_.end()) {
     
     recv_info = received_payload_info_ptr(new received_payload_info);
-    recv_info->first_chunk_header = RtmpHeader_ptr(new RtmpHeader(header_ptr.get()));
+    recv_info->first_chunk_header = RtmpHeader_ptr(new RtmpHeader(header_ptr.get()));  
 
-    // TODO:
-    // 같은 chunk 에 대해서 message stream id 가 다른 0 type 이 하나 더 왔을 때, 이전 정보를 덮어쓰게 될 텐데... 괜찮을까?
-    // 즉, message stream id 에 대한 정보가 없어도 될까? 
-    // message header type 0 과 message header type `의 경우, 
     if (recv_info->first_chunk_header->has_msg_len_and_type()) {
       channels_[cs_id].last_msg_len = recv_info->first_chunk_header->msg_length_;
       channels_[cs_id].last_msg_type_id = recv_info->first_chunk_header->msg_type_id_;

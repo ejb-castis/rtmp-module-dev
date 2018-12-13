@@ -12,6 +12,10 @@ include_directories (
   SYSTEM ${Boost_INCLUDE_DIRS}
   SYSTEM ${LIBXML2_INCLUDE_DIR}
   /usr/inlcude
+  common
+  logic
+  network
+  protocol
   src
   .
 )

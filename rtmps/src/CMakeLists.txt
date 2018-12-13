@@ -7,7 +7,19 @@ project(${PROJECT_NAME})
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
+include_directories(
+common
+logic
+network
+protocol
+.
+)
+
 set(SRCS
+flv_message.cpp
+flv_util.cpp
+parsingflv.cpp
+publish_to_streamer.cpp
 common/EncryptUtil.cpp
 common/NetworkUtil.cpp
 common/StreamUtil.cpp
@@ -42,6 +54,10 @@ protocol/RtmpPayloadParser.cpp
 )
 
 set(HEADERS
+flv_message.h
+flv_util.h
+parsingflv.h
+publish_to_streamer.h
 common/ConcurrentQueue.hpp
 common/DataType.hpp
 common/EncryptUtil.hpp

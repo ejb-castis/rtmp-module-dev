@@ -16,6 +16,8 @@
 #include "RequestParser.hpp"
 #include "RequestHandler.hpp"
 #include "../common/ConcurrentQueue.hpp"
+#include "flv_message.h"
+
 
 namespace rtmp_network {
 
@@ -74,6 +76,8 @@ class Connection : public boost::enable_shared_from_this<Connection>,
   HandshakeManager handshake_manager_;
   RequestHandler_ptr handler_;
   RequestParser_ptr parser_;
+
+  castis::streamer::media_publish_es_context_ptr context_;  
 
   unsigned int id_;
 };

@@ -12,6 +12,7 @@ include_directories (
   SYSTEM ${Boost_INCLUDE_DIRS}
   SYSTEM ${LIBXML2_INCLUDE_DIR}
   /usr/inlcude
+  rtmps/src
   rtmps/src/common
   rtmps/src/logic
   rtmps/src/network
@@ -20,6 +21,8 @@ include_directories (
   rtmps/src/protocol/control_message
   rtmps/src/protocol/data_message
   rtmps/src/protocol/media_message
+  rapidjson
+  streamer
   src
   .
 )

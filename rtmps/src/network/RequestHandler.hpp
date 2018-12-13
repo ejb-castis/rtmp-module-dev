@@ -4,6 +4,7 @@
 #include "Message.hpp"
 #include "MessageSender.hpp"
 #include <boost/shared_ptr.hpp>
+#include "flv_message.h"
 
 namespace rtmp_network {
 class RequestHandler {
@@ -28,6 +29,9 @@ class RequestHandler {
   }
   virtual void handle_request(Message_ptr request) = 0;
   virtual void notify_disconnect() = 0;
+ 
+  castis::streamer::media_publish_es_context_ptr context_;  
+
 };
 typedef boost::shared_ptr<RequestHandler> RequestHandler_ptr;
 

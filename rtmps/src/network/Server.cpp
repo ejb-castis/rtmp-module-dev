@@ -1,13 +1,3 @@
-//
-// server.cpp
-// ~~~~~~~~~~
-//
-// Copyright (c) 2003-2012 Christopher M. Kohlhoff (chris at kohlhoff dot com)
-//
-// Distributed under the Boost Software License, Version 1.0. (See accompanying
-// file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
-//
-
 #include "Server.hpp"
 #include <boost/thread/thread.hpp>
 #include <boost/bind.hpp>
@@ -50,7 +40,6 @@ server::server(const std::string& address, const std::string& port,
 }
 
 void server::run() {
-  // Create a pool of threads to run all of the io_services.
   std::vector<boost::shared_ptr<boost::thread> > threads;
   for (std::size_t i = 0; i < thread_pool_size_; ++i) {
     boost::shared_ptr<boost::thread> thread(
@@ -59,23 +48,15 @@ void server::run() {
     threads.push_back(thread);
   }
 
-  // Wait for all threads in the pool to exit.
   for (std::size_t i = 0; i < threads.size(); ++i)
     threads[i]->join();
 }
 
-// FIXME:
-// new_connection_ 은 shared pointer 인데 reset 하는 거 어색한 것 같음
-// 다른 방안은 없을까?
-// async accept 코드 익숙하지 않아서 고치기 어렵네요. 
 void server::start_accept() {
   new_connection_.reset(
       new Connection(io_service_, handler_factory_, parser_factory_,
                      new_connection_id_++));
-  // acceptor_.async_accept(
-  //     new_connection_->socket(),
-  //     boost::bind(&server::handle_accept, this,
-  //                 boost::asio::placeholders::error));
+
   acceptor_.async_accept(
        new_connection_->socket(),
        [this](const boost::system::error_code& e) {

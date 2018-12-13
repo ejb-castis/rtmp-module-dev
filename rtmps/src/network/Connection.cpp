@@ -36,14 +36,16 @@ Connection::Connection(boost::asio::io_service& io_service,
       continuous_send_timer_(
           io_service,
           boost::posix_time::milliseconds(CONTINUOUS_SEND_INTERVAL_MS)) {
-  //handler_ = RequestHandler_ptr(new rtmp_logic::RtmpHandler(this));
+  
+  context_ = std::make_shared<castis::streamer::MediaPublishEsContext>();
   handler_ = handler_factory->get_request_handler(this, id);
   parser_ = parser_factory->get_request_parser(this, id);
   handshake_manager_.set_connection_id(id);
+  handler_->context_ = context_;
 }
 
 Connection::~Connection() {
-  std::cout << "Connection (" << id_ << ") : destructor" << std::endl;
+//  std::cout << "connection (" << id_ << ") : destructor" << std::endl;
 }
 
 boost::asio::ip::tcp::socket& Connection::socket() {
@@ -55,7 +57,7 @@ unsigned int Connection::get_message_sender_id() {
 }
 
 void Connection::start() {
-  RTMPLOG(info) << "Connection[" << id_ << "]:start";
+  RTMPLOGF(info, "start connection[%1%]", id_ );
   unsigned int C0_C1_len = HANDSHAKE_MSG_VERSION_LEN + HANDSHAKE_MSG_LENGTH;
 
   boost::asio::async_read(
@@ -69,12 +71,10 @@ void Connection::start() {
 
 void Connection::handle_read_handshake_C0_C1(
     const boost::system::error_code& e) {
-  RTMPLOG(debug) << "Connection[" << id_ << "]:handle_read_handshake_C0_C1";
+  RTMPLOGF(debug, "read handshake C0_C1. connection[%1%]", id_ );
 
   if (e) {
-    RTMPLOG(error) << "Connection[" << id_
-                       << "]:handle_read_handshake_C0_C1 error(" << e.message()
-                       << ") => disconnect";
+    RTMPLOGF(error, "handshake C0_C1 error. connection[%1%],error_message[%2%]", id_, e.message());
     disconnect();
     return;
   }
@@ -95,11 +95,10 @@ void Connection::handle_read_handshake_C0_C1(
   }
 }
 void Connection::handle_S0_S1_S2_write(const boost::system::error_code& e) {
-  RTMPLOG(debug) << "Connection[" << id_ << "]:handle_S0_S1_S2_write";
+  RTMPLOGF(debug, "write handshake S0_S1_S2. connection[%1%]", id_ );
 
   if (e) {
-    RTMPLOG(error) << "Connection[" << id_ << "]:S0_S1_S2_write error("
-                       << e.message() << ") => disconnect";
+    RTMPLOGF(error,"write handshake S0_S1_S1 error. connection[%1%],error_message[%2%]", id_, e.message());
     disconnect();
     return;
   }
@@ -114,11 +113,10 @@ void Connection::handle_S0_S1_S2_write(const boost::system::error_code& e) {
 }
 
 void Connection::handle_read_handshake_C2(const boost::system::error_code& e) {
-  RTMPLOG(debug) << "Connection[" << id_ << "]:handle_read_handshake_C2";
+  RTMPLOGF(debug, "read handshake C2. connection[%1%]", id_ );
 
   if (e) {
-    RTMPLOG(error) << "Connection[" << id_ << "]:read_handshake_C2 error("
-                       << e.message() << ") => disconnect";
+    RTMPLOGF(error,"read handshake C2 error. connection[%1%],error_message[%2%]", id_, e.message());
     disconnect();
     return;
   }
@@ -137,29 +135,24 @@ void Connection::handle_read_handshake_C2(const boost::system::error_code& e) {
 void Connection::handle_read(const boost::system::error_code& e,
                              std::size_t bytes_transferred) {
   if (e) {
-    RTMPLOG(error) << "Connection[" << id_ << "]:handle_read error("
-                       << e.message() << ") => disconnect";
+    RTMPLOGF(error,"read error. connection[%1%],error_message[%2%]", id_, e.message());
     disconnect();
     return;
   }
 
   if (bytes_transferred > 0) {
     request_streambuf_.commit(bytes_transferred);
-    std::size_t read_size = request_streambuf_.size();
+    std::size_t buffer_size = request_streambuf_.size();
 
-    RTMPLOG(debug) << "Connection[" << id_ << "]:handle_read:read size:"
-                        << read_size << ",bytes_transferred:"
-                        << bytes_transferred;
+    //RTMPLOGF(debug,"read. connection[%1%],bytes_transferred[%2%],buffer_size[%3%]", id_,bytes_transferred,buffer_size);
 
     std::istream request_stream(&request_streambuf_);
 
-    int total_readed_in_parse = 0;
+    std::size_t total_read_in_parse = 0;
     while (true) {
-      size_t readed_in_parse = 0;
+      size_t read_in_parse = 0;
 
-      if (read_size - total_readed_in_parse == 0) {
-        // RTMPLOG(debug) << "Connection[" << id_
-        //                     << "]:handle_read:continuous read";
+      if (buffer_size == total_read_in_parse ) {
         boost::asio::streambuf::mutable_buffers_type buf = request_streambuf_
             .prepare(READ_BUF_SIZE);
         socket_.async_read_some(
@@ -172,30 +165,18 @@ void Connection::handle_read(const boost::system::error_code& e,
       }
 
       boost::tribool result = parser_->parse(request_stream,
-                                             read_size - total_readed_in_parse,
-                                             readed_in_parse);
-      total_readed_in_parse += readed_in_parse;
-
-      // RTMPLOG(debug) << "Connection[" << id_
-      //                     << "]:handle_read:readed_in_parse:" << readed_in_parse
-      //                     << ",total readed in parse : "
-      //                     << total_readed_in_parse;
-      
-      // handle message
+                                             buffer_size - total_read_in_parse,
+                                             read_in_parse);
+      total_read_in_parse += read_in_parse;
+     
       if (result) {
         handler_->handle_request(parser_->get_parsed_message());
-      }
-      // parsing fail
-      else if (!result) {
-        RTMPLOG(error) << "connection_id:" << id_<< ",parsing received msg fail";
+      } else if (!result) {
+        RTMPLOGF(error,"parsing message error. connection[%1%]", id_ );
         disconnect();
         return;
       }
-      // continuous read
       else {
-        // RTMPLOG(debug) << "Connection[" << id_
-        //                     << "]:handle_read:continuous read";
-
         boost::asio::streambuf::mutable_buffers_type buf = request_streambuf_
             .prepare(READ_BUF_SIZE);
         socket_.async_read_some(
@@ -235,8 +216,7 @@ void Connection::write_message() {
       Message_ptr write_msg = write_queue_.front();
       write_queue_.pop();
 
-      RTMPLOG(info) << "Connection[" << id_ << "]:write_message:"
-                        << write_msg->to_string();
+      RTMPLOGF(info,"write message. connection[%1%],write_message[%2%]", id_, write_msg->to_string());
 
       size_t writed_bytes = write_msg->write_payload(reply_stream);
       total_writed_bytes += writed_bytes;
@@ -269,8 +249,7 @@ void Connection::handle_send_timer(const boost::system::error_code& e) {
 
 void Connection::handle_write(const boost::system::error_code& e) {
   if (e) {
-    RTMPLOG(warning) << "Connection[" << id_ << "]:handle_write error("
-                       << e.message() << ") => disconnect";
+    RTMPLOGF(error,"write error. connection[%1%],error_message[%2%]", id_, e.message());
     disconnect();
     return;
   }
@@ -279,8 +258,8 @@ void Connection::handle_write(const boost::system::error_code& e) {
 void Connection::change_continuous_send_state(bool state) {
   const bool change_state_to_true = state && !is_continuous_send_state_;
   if (change_state_to_true) {
-    RTMPLOG(debug) << "Connection[" << id_
-                      << "]:change_continuous_send_state:set timer and wait";
+    RTMPLOGF(debug,"write status changed. connection[%1%]", id_);
+
     continuous_send_timer_.expires_from_now(
         boost::posix_time::milliseconds(CONTINUOUS_SEND_INTERVAL_MS));
     continuous_send_timer_.async_wait(

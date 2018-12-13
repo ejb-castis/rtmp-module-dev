@@ -16,63 +16,27 @@
 #include <boost/bind/bind.hpp>
 
 #include "write_flv.h"
+#include "publish_to_streamer.h"
 
 using namespace rtmp_protocol;
 namespace rtmp_logic {
 
-const unsigned int NEW_STREAM_ID = 3555;
+const unsigned int NEW_STREAM_ID_SEED = 365;
 
 RtmpHandler::RtmpHandler(rtmp_network::MessageSender_wptr sender,
                          unsigned int id)
     : rtmp_network::RequestHandler(sender),
       chunk_size_(128),
       id_(id) {
-  // TODO: implement StreamManager logic
-//  for (size_t i = 0; i < sizeof(used_msg_stream_flag_); i++)
-//    used_msg_stream_flag_[i] = false;
 }
 
 unsigned int RtmpHandler::get_id() {
   return id_;
 }
 
-// TODO: implement StreamManager logic
-//MessageStream_ptr RtmpHandler::get_new_stream() {
-//  for (size_t i = 0; i < sizeof(used_msg_stream_flag_); i++)
-//    if (!used_msg_stream_flag_[i]) {
-//      used_msg_stream_flag_[i] = true;
-//      MessageStream_ptr new_stream = MessageStream_ptr(new MessageStream);
-//      new_stream->id_ = i + 1;
-//      msg_streams_.push_back(new_stream);
-//      return new_stream;
-//    }
-//  return MessageStream_ptr();
-//}
-//
-//void RtmpHandler::remove_stream(const std::string & stream_name) {
-//  std::list<MessageStream_ptr>::iterator it;
-//  it = std::find_if(
-//      msg_streams_.begin(), msg_streams_.end(),
-//      boost::bind(&MessageStream::is_same_name, _1, boost::ref(stream_name)));
-//
-//  if (it == msg_streams_.end())
-//    return;
-//
-//  unsigned int stream_id = (*it)->id_;
-//  used_msg_stream_flag_[stream_id - 1] = false;
-//  msg_streams_.erase(it);
-//
-//}
-
 void RtmpHandler::notify_disconnect() {
   // TODO: implement StreamManager logic
 }
-
-
-//TODO:
-// adding handler for OnMetaData
-// adding handler for Audio
-// adding handler for Video
 
 void RtmpHandler::handle_request(rtmp_network::Message_ptr request) {
   RtmpMessage_ptr rtmp_msg = boost::dynamic_pointer_cast<RtmpMessage>(request);
@@ -160,10 +124,6 @@ void RtmpHandler::handle_request(rtmp_network::Message_ptr request) {
   return;
 }
 
-// FIXME: 
-// 2018-10-01 :
-// sending OnBWDone message removed : according to RTMP specification
-// variable name changed : result -> connect_result
 void RtmpHandler::handle_connect_message(ConnectMessage_ptr request) {
   WindowAcknowledgementSize_ptr win_ack_size = WindowAcknowledgementSize_ptr(
       new WindowAcknowledgementSize(2500000));
@@ -198,13 +158,8 @@ void RtmpHandler::handle_connect_message(ConnectMessage_ptr request) {
   return;
 }
 
-// FIXME: history
-// 2018-10-01
-// return call error message to success message 
-// ??? wonder if sending response message with the same chunkstream id and msgstream id as requested chunkstream id and msgstream id
-
 void RtmpHandler::handle_release_stream(ReleaseStream_ptr request) {
-//  TODO: implement StreamManager logic
+
   auto manager = StreamManager::get_instance();
   manager.release_stream(request->stream_name_);
   
@@ -213,12 +168,6 @@ void RtmpHandler::handle_release_stream(ReleaseStream_ptr request) {
   unsigned int msg_stream_id = request->get_header()->msg_stream_id_;
   double transaction_id = request->get_transaction_id();
   unsigned int chunk_size = chunk_size_;
-
-  // CallError_ptr call_error = CallError_ptr(
-  //     new CallError(header_type, chunk_stream_id, msg_stream_id, transaction_id,
-  //                   chunk_size));
-
-  // push_to_send_queue(call_error);
 
   rtmp_network::Message_ptr simple_result = SimpleResult_ptr(
     new SimpleResult(header_type, chunk_stream_id, msg_stream_id,
@@ -292,20 +241,8 @@ void RtmpHandler::handle_create_stream(CreateStream_ptr request) {
   double transaction_id = request->get_transaction_id();
   unsigned int chunk_size = chunk_size_;
 
-  // TODO: implement StreamManager logic
-  // stream_id managed per connection
-//  MessageStream_ptr new_stream = get_new_stream();
-//
-//  if (new_stream == NULL) {
-//    RTMPLOG(error)
-//        << "RtmpHandler[" << get_id()
-//        << "]:handle_create_stream:FATAL error.cannot create msg stream.";
-//    return;
-//  }
-//  double new_stream_id = new_stream->id_;
-
-  double new_stream_id = NEW_STREAM_ID;
-
+  double new_stream_id = NEW_STREAM_ID_SEED + id_;
+  
   rtmp_network::Message_ptr simple_result = SimpleResult_ptr(
       new SimpleResult(header_type, chunk_stream_id, msg_stream_id,
                        transaction_id, chunk_size, new_stream_id));
@@ -363,9 +300,11 @@ void RtmpHandler::handle_publish(Publish_ptr request) {
 
   std::string stream_name = request->stream_name_;
   std::string stream_type = request->stream_type_;
-  
-  // TODO: create client id
-  std::string client_id = "9_1_38567520";
+  std::string client_id = stream_type + ":" +  stream_name + ":" + std::to_string(id_);
+
+  context_->stream_name_ = stream_name;
+  context_->stream_type_ = stream_type;
+  context_->client_id_ = client_id;
 
   rtmp_network::Message_ptr on_status = OnStatus_ptr(
       new OnStatus(header_type, chunk_stream_id, msg_stream_id, transaction_id,
@@ -476,6 +415,7 @@ void RtmpHandler::handle_play(Play_ptr request) {
 
 void RtmpHandler::handle_media_message(MediaMessage_ptr request) {
   write_flv(request);
+  publish_to_streamer(context_, request);
 }
 
 void RtmpHandler::handle_set_chunk_size(SetChunkSize_ptr request) {
