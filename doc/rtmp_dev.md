@@ -1,3 +1,18 @@
+#2018-12-14
+
+http://172.16.33.52:8080/brokering/live/baseball.mpg/master.m3u8
+http://172.16.33.52:8080/brokering/live/750k.mp4/master.m3u8
+
+http://172.16.33.52:8080/brokering/live/750k.mp4
+
+
+video frame 
+avc_seq_header - nal - nal - ...  - avc_end_of_sequence
+
+audio frame
+aac_specific_config - frame - frame ...
+
+
 #2018-12-07
 
 server 가 발급하는 id 로 chunkstream id 가 정해진다.

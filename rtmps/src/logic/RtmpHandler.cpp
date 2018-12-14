@@ -17,11 +17,12 @@
 
 #include "write_flv.h"
 #include "publish_to_streamer.h"
+#include "rtmpmodulelogger.h"
 
 using namespace rtmp_protocol;
 namespace rtmp_logic {
 
-const unsigned int NEW_STREAM_ID_SEED = 365;
+const unsigned int NEW_STREAM_ID = 3555;
 
 RtmpHandler::RtmpHandler(rtmp_network::MessageSender_wptr sender,
                          unsigned int id)
@@ -35,7 +36,8 @@ unsigned int RtmpHandler::get_id() {
 }
 
 void RtmpHandler::notify_disconnect() {
-  // TODO: implement StreamManager logic
+  RTMPLOGF(info,"connection closed. ready to end stream. stream_type[%1%],stream_name[%2%],client_id[%3%]",context_->stream_type_, context_->stream_name_, context_->client_id_);
+  context_->ready_to_end_of_stream_ = true;
 }
 
 void RtmpHandler::handle_request(rtmp_network::Message_ptr request) {
@@ -241,7 +243,9 @@ void RtmpHandler::handle_create_stream(CreateStream_ptr request) {
   double transaction_id = request->get_transaction_id();
   unsigned int chunk_size = chunk_size_;
 
-  double new_stream_id = NEW_STREAM_ID_SEED + id_;
+  double new_stream_id = NEW_STREAM_ID;
+  context_->stream_id_ = static_cast<unsigned int>(new_stream_id);
+  context_->ready_to_end_of_stream_ = false;
   
   rtmp_network::Message_ptr simple_result = SimpleResult_ptr(
       new SimpleResult(header_type, chunk_stream_id, msg_stream_id,
@@ -262,6 +266,8 @@ void RtmpHandler::handle_delete_stream(DeleteStream_ptr request) {
   double transaction_id = request->get_transaction_id();
   unsigned int chunk_size = chunk_size_;
   unsigned int stream_id = request->stream_id();
+
+  context_->ready_to_end_of_stream_ = true;
   
   rtmp_network::Message_ptr simple_result = SimpleResult_ptr(
       new SimpleResult(header_type, chunk_stream_id, msg_stream_id,
@@ -300,7 +306,8 @@ void RtmpHandler::handle_publish(Publish_ptr request) {
 
   std::string stream_name = request->stream_name_;
   std::string stream_type = request->stream_type_;
-  std::string client_id = stream_type + ":" +  stream_name + ":" + std::to_string(id_);
+  //std::string client_id = stream_type + ":" +  stream_name + ":" + std::to_string(id_);
+  std::string client_id = "9_1_38567520";
 
   context_->stream_name_ = stream_name;
   context_->stream_type_ = stream_type;
@@ -414,7 +421,7 @@ void RtmpHandler::handle_play(Play_ptr request) {
 
 
 void RtmpHandler::handle_media_message(MediaMessage_ptr request) {
-  write_flv(context_, request);
+  //write_flv(context_, request);
   publish_to_streamer(context_, request);
 }
 

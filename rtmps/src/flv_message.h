@@ -71,9 +71,15 @@ struct RecordingFlvContext {
 };
 
 struct MediaPublishEsContext {
-public:  
+public: 
+  typedef enum { begin, init, publishing, end } publish_state_t;
+  publish_state_t publish_state_{begin};
+
+  std::string publish_live_addr_port_{"172.16.33.52:8081"};
+  std::string publish_live_uri_{"/cdn/live"};
+
   std::string publish_id_;
-  std::string publish_addr_port_;
+  std::string publish_es_addr_port_;
   AudioPublishEsInit audio_init_es_;
   VideoPublishEsInit video_init_es_;
   std::vector<unsigned char> video_eos_;
@@ -82,12 +88,14 @@ public:
   uint32_t video_timestamp_delta_{0};
   uint32_t audio_timestamp_delta_{0};
 
-  std::string provider_;
+  std::string provider_{"brokering"};
   std::string stream_name_;
   uint8_t recording_{1};
 
   std::string stream_type_;
   std::string client_id_;
+  unsigned int stream_id_{0};
+  bool ready_to_end_of_stream_{false};
 
   std::list<media_publish_es_ptr> media_es_;
   uint64_t frame_number_{0};
@@ -128,10 +136,19 @@ enum FLV_ES_TYPE {
 bool read_flv_es_dump_file(castis::streamer::media_publish_es_context_ptr& context, std::string const& file_path);
 bool process_flv_es_message(
   castis::streamer::media_publish_es_context_ptr& context, 
+  uint8_t message_type,
+  uint32_t timestamp,
+  uint32_t message_length,  
   unsigned char* const buffer, 
   std::size_t const buffer_size,
   int& ec);
 void read_flv_es_dump(castis::streamer::media_publish_es_context_ptr& context, unsigned int start, unsigned int end);
+bool process_flv_es_dump_message(
+  castis::streamer::media_publish_es_context_ptr& context, 
+  unsigned char* const buffer, 
+  std::size_t const buffer_size,
+  int& ec);
+
 
 
 } // namespace flv_message

@@ -21,7 +21,7 @@
 #include "rtmpmodulelogger.h"
 
 #define READ_BUF_SIZE 8192
-#define CONTINUOUS_SEND_INTERVAL_MS 100
+#define CONTINUOUS_SEND_INTERVAL_MS 5
 
 namespace rtmp_network {
 

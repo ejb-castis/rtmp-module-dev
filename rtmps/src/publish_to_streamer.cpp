@@ -20,14 +20,6 @@
 #include "rapidjson/writer.h"
 #include "streamer/base64.h"
 
-
-// #include "rapidjson/document.h"
-// #include "rapidjson/error/en.h"
-// #include "rapidjson/stringbuffer.h"
-// #include "rapidjson/writer.h"
-// #include "streamer/base64.h"
-
-
 #include "publish_to_streamer.h"
 
 namespace rtmp_logic {
@@ -108,9 +100,11 @@ void begin_publish(std::string const& url, castis::streamer::media_publish_es_co
   std::cout << "publish_addr[" << publish_addr << "]" << std::endl;
 }
 
-void init_publish(std::string const& publish_addr, std::string const& upload_id, castis::streamer::media_publish_es_context_ptr& context, std::error_code& ec)
+void init_publish(castis::http::AsyncClient& client, castis::streamer::media_publish_es_context_ptr& context, int& ec)
 {
-  std::string publish_url = "http://" + publish_addr + "/publish/es/" + upload_id + "/init";
+  ec=0;
+  std::string publish_url = "http://" + context->publish_es_addr_port_ + 
+    "/publish/es/" + context->publish_id_ + "/init";
   
   castis::http::Request req(publish_url);
   req.SetMethod("POST");
@@ -123,8 +117,9 @@ void init_publish(std::string const& publish_addr, std::string const& upload_id,
     auto buf = reinterpret_cast<const char*>(context->video_init_es_.codecInfo.data());
     std::string avc_data(buf, context->video_init_es_.codecInfo.size());
     if (Base64::Encode(avc_data, &avc) == false) {
-      ec = std::make_error_code(std::errc::invalid_argument);
       std::cout << "failed to encode base64 with avc codec info" << std::endl;
+      ec = 3;
+      return;
     }
   }
 
@@ -132,8 +127,9 @@ void init_publish(std::string const& publish_addr, std::string const& upload_id,
     auto buf = reinterpret_cast<const char*>(context->audio_init_es_.codecInfo.data());
     std::string aac_data(buf, context->audio_init_es_.codecInfo.size());
     if (Base64::Encode(aac_data, &aac) == false) {
-      ec = std::make_error_code(std::errc::invalid_argument);
       std::cout << "failed to encode base64 with avc codec info" << std::endl;
+      ec = 3;
+      return;
     }
   }
 
@@ -151,22 +147,24 @@ void init_publish(std::string const& publish_addr, std::string const& upload_id,
   std::cout << "request string>" << std::endl;
   std::cout << req.string() << std::endl;
 
-  castis::http::AsyncClient client;
 	castis::http::Response res;
 
   if ( client.SendAndReceive(req, &res) == false ) {
     std::cout << "send and receive error" << std::endl;
+    ec=1;
     return ;
   }
   if (res.status_code() < 200 || res.status_code() >= 300) {
     std::cout << "response error[" << res.status_code() <<"]"<< std::endl;
+    ec=res.status_code();
     return ;
   }
  
 }
 
-void publish_es(castis::http::AsyncClient& client, std::string const& publish_addr, std::string const& upload_id, castis::streamer::media_publish_es_context_ptr& context, std::error_code& ec)
+void publish_es(castis::http::AsyncClient& client, castis::streamer::media_publish_es_context_ptr& context, int& ec)
 {
+  ec = 0;
   if (context->media_es_.empty()) return;
 
   auto es = context->media_es_.front().get();
@@ -182,9 +180,9 @@ void publish_es(castis::http::AsyncClient& client, std::string const& publish_ad
   if (es_str.empty()) return;
 
   std::string path =
-      "/publish/es/" + upload_id + "/" + std::to_string(es->frameNumber);
+      "/publish/es/" + context->publish_id_ + "/" + std::to_string(es->frameNumber);
 
-  std::string publish_url = "http://" + publish_addr + path;
+  std::string publish_url = "http://" + context->publish_es_addr_port_ + path;
 
   castis::http::Request req(publish_url);
   req.SetMethod("POST");
@@ -210,20 +208,23 @@ void publish_es(castis::http::AsyncClient& client, std::string const& publish_ad
 
   if ( client.SendAndReceive(req, &res) == false ) {
     std::cout << "send and receive error" << std::endl;
+    ec = 1;
     return ;
   }
   if (res.status_code() < 200 || res.status_code() >= 300) {
     std::cout << "response error[" << res.status_code() <<"]"<< std::endl;
+    ec = res.status_code();
     return ;
   }
 
 }
 
 
-void end_publish(std::string const& publish_addr, std::string const& upload_id, int&ec)
+void end_publish(castis::streamer::media_publish_es_context_ptr& context, int&ec)
 {
   ec = 0;
-  std::string publish_url = "http://" + publish_addr + "/cdn/live/" + upload_id;
+  std::string publish_url = "http://" + context->publish_live_addr_port_ +  
+    context->publish_live_uri_ + "/" + context->publish_id_;
   castis::http::Request req(publish_url);
   req.SetMethod("DELETE");
   req.header()["HOST"] = "flv-es-uploader";
@@ -248,91 +249,82 @@ void end_publish(std::string const& publish_addr, std::string const& upload_id, 
   }  
 }
 
+// TODO: 
+// async ?
+// retry ?
 void publish_to_streamer(castis::streamer::media_publish_es_context_ptr context, 
-  rtmp_protocol::MediaMessage_ptr& request) {
-   
-  RTMPLOGF(debug,"pulishing stream_name[%1%],client_id[%2%]",context->stream_name_, context->client_id_);
+  rtmp_protocol::MediaMessage_ptr request) {
+  using namespace castis::streamer;
 
-  return;
+  RTMPLOGF(debug,"pulishing stream_type[%1%],stream_name[%2%],client_id[%3%]",context->stream_type_, context->stream_name_, context->client_id_);
 
+  unsigned char* data = request->get_data().get();
+  std::size_t data_len = request->get_data_len();
+  int ec; 
 
-  typedef enum { begin, init, publishing, end } publish_state_t;
+  bool ret = flv_message::process_flv_es_message(
+    context, 
+    static_cast<uint8_t>(request->get_header()->msg_type_id_),
+    static_cast<uint32_t>(request->get_header()->timestamp_),
+    static_cast<uint32_t>(request->get_header()->msg_length_),  
+    data, data_len, ec);
 
-  publish_state_t state = begin;
-  std::string url = "http://172.16.33.52:8081/cdn/live";
-  std::string upload_id, publish_addr;
-  context->provider_ = "brokering";
-  context->stream_name_ = "750k.mp4";
-  context->recording_ = 1;
+  std::cout << "process_flv_es_message. ec[" << ec << "]" << ",ret[" << ret << "],";
+  std::cout << "context[" << to_string(context) << "]" ;
+  std::cout << std::endl;
 
+  RTMPLOGF(debug,"process es. context[%1%],stream_type[%2%],stream_name[%3%],client_id[%4%]",to_string(context), context->stream_type_, context->stream_name_, context->client_id_);
+
+  auto& state = context->publish_state_;
+  if (state == MediaPublishEsContext::begin)
   {
-    int ec{0};
+    std::string url = "http://" + context->publish_live_addr_port_ + context->publish_live_uri_;
+    std::string upload_id, publish_addr;
+    int ec;
     begin_publish(url, context, publish_addr, upload_id, ec);
-    context->publish_id_ = upload_id;
-    context->publish_addr_port_ = publish_addr;
-    state = init;
-  }
-
-  {  
-    using namespace flv_message;
-    context->publish_id_ = upload_id;
-    unsigned six = 1;
-    //unsigned eix = 234; for 20181130104010.mp4
-    unsigned eix = 42274; //42274 data/750k.mp4
-
-    std::string directory = "/data/project/git/rtmp-module/build/dump/flv_es";
-    std::string file_name = "flv_es.dump";
-    std::string file_path;
-
-    castis::http::AsyncClient client;
-
-    for (unsigned index=six; index <= eix; ++index )  {
-      file_path = directory + "/" + file_name + "." + std::to_string(index);
-
-      read_flv_es_dump_file(context, file_path);
-
-      if (state == init && ready_to_send(context)) {
-        std::error_code ec;
-        init_publish(publish_addr, upload_id, context, ec);
-
-        state = publishing;
-      }  else if (state == publishing && not context->media_es_.empty()) {
-
-        std::cout << "media_es_size[" << context->media_es_.size() << "]" << std::endl;
-
-        std::error_code ec;
-        publish_es(client, publish_addr, upload_id, context, ec);
-        std::cout << std::endl;
-
-        context->media_es_.pop_front();
-      }
+    if (ec!=0) {
+      std::cout << "begin publish fail. ec[" << ec << "]" << std::endl;
+      return;
     }
-
-    if (state == publishing ) {
-      std::size_t n = context->media_es_.size();
-      for (std::size_t i=0 ; i < n; ++i ) {
-
-        std::cout << "media_es_size[" << context->media_es_.size() << "]" << std::endl;
-
-        std::error_code ec;
-        publish_es(client, publish_addr, upload_id, context, ec);
-        std::cout << std::endl;
-
-        context->media_es_.pop_front();
-      }
-    }
-
-    state = end;
+    context->publish_id_ = upload_id;
+    context->publish_es_addr_port_ = publish_addr;
+    state = MediaPublishEsContext::init;
   }
-  if (state==end && end_of_video_es(context))
   {
-    int ec{0};
-    end_publish(publish_addr, upload_id, ec);
+    castis::http::AsyncClient client;
+    if (state == MediaPublishEsContext::init && ready_to_send(context)) {
+        int ec;
+        init_publish(client, context, ec);
+        if(ec!=0) {
+          std::cout << "init publish fail. ec[" << ec << "]" << std::endl;
+          return;
+        }
+        state = MediaPublishEsContext::publishing;
+    }
+
+    while(state == MediaPublishEsContext::publishing && not context->media_es_.empty()) {
+
+      std::cout << "media_es_size[" << context->media_es_.size() << "]" << std::endl;
+      int ec;
+      publish_es(client, context, ec);
+      if(ec!=0) {
+        std::cout << "publish es fail. ec[" << ec << "]" << std::endl;
+        return;
+      }        
+      context->media_es_.pop_front();
+      
+    }
   }
-
-
-
-
+  if (context->media_es_.empty() &&
+      (context->ready_to_end_of_stream_ || end_of_video_es(context))) {
+    int ec;
+    end_publish(context, ec);
+    if(ec!=0) {
+      std::cout << "end publish fail. ec[" << ec << "]" << std::endl;
+      return;
+    }
+    state=MediaPublishEsContext::end;
+  }
 
 }
 
