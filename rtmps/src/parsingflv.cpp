@@ -510,55 +510,52 @@ bool get_video(unsigned char*& buffer, buffer_t& video_es, video_frame_t& video_
 
   return true;
 }  
-// FIXME: 
-// buffer 가 두 개 필요없는 것 같음
-//
-void replace_nalu_strat_code_from_mp4_to_ts(unsigned char nal_start_code_length,
-  buffer_t const& mp4_video_es, buffer_t& ts_video_es)
-{
-  unsigned char* mp4_es_ptr = mp4_video_es.ptr_;
-  std::size_t mp4_es_len = mp4_video_es.len_;
 
-  unsigned char* ts_es_ptr = ts_video_es.ptr_;
+void replace_nalu_start_code_from_mp4_to_ts(unsigned char nal_start_code_length, flv_util::buffer_t const& video_es)
+{
+  unsigned char* mp4_es_ptr = video_es.ptr_;
+  std::size_t left_mp4_es_len = video_es.len_;
+
+  unsigned char* ts_es_ptr = video_es.ptr_;
   std::size_t ts_es_written = 0 ;
+
+  buffer_t ts_nal_start_code(nal_start_code_length);
+  ts_nal_start_code.len_ = nal_start_code_length;
+  put_same_nbyte(ts_nal_start_code, 0x00, nal_start_code_length - 1);
+  put_last_byte(ts_nal_start_code, 0x01);
+
+  //std::cout << "ts nal start code:" << to_hex(ts_nal_start_code) << std::endl;
 
   buffer_t nal_start_code(nal_start_code_length);
   
-  while ( mp4_es_len > 0 ) {
-    // read start code
-    read_nbyte(mp4_es_ptr, nal_start_code_length, nal_start_code, mp4_es_len); 
+  uint32_t nal_length = 0;
+  while ( left_mp4_es_len > 0 ) {
 
-    // get nal length  from the last one byte of start code of 4 byte
-    uint32_t nal_length = 0;
-    read_nbyte(nal_start_code, nal_length);  
+    //std::cout << "s:" << left_mp4_es_len << std::endl;
+    //read mp4 nal start code
+    read_nbyte(mp4_es_ptr, nal_start_code_length, nal_start_code, left_mp4_es_len); 
+    nal_length = 0;
+    read_nbyte(nal_start_code, nal_length);
+        
+    //std::cout << left_mp4_es_len << std::endl;
     
-    //std::cout << "nal length >" << std::endl;
-    //std::cout <<  nal_length << std::endl;
+    //write ts nal start code
+    write_nbyte(ts_nal_start_code, ts_es_ptr, ts_es_written); 
 
-    // std::cout << "mp4 nal start code >" << std::endl;
-    // std::cout << to_hex(nal_start_code) << std::endl;
+    //move to next nal start code
+    mp4_es_ptr += nal_length;
+    left_mp4_es_len -= nal_length;
+    //move to next nal start code
+    ts_es_ptr += nal_length;
+    ts_es_written += nal_length;
 
-    // replace last nal byte
-    put_same_nbyte(nal_start_code, 0x00, nal_start_code_length - 1);
-    put_last_byte(nal_start_code, 0x01);
-
-    // write nal start code 
-    write_nbyte(nal_start_code, ts_es_ptr, ts_es_written); 
-    ts_video_es.len_ = ts_es_written;
-
-    // std::cout << "ts video nal start code >" << std::endl;
-    // std::cout << to_hex(ts_video_es) << std::endl;
-
-    // write nal
-    write_nbyte(mp4_es_ptr, nal_length, ts_es_ptr, mp4_es_len, ts_es_written); 
-    ts_video_es.len_ = ts_es_written;
-
-    // std::cout << "ts video nal start code >" << std::endl;
-    // std::cout << to_hex(ts_video_es) << std::endl;
-   
+    //std::cout << "nal len:" << nal_length << std::endl;
+    //std::cout << "e :" << left_mp4_es_len << std::endl;
   }
 
+  //std::cout << to_hex(video_es) << std::endl;
 }
+
 
 bool read_flv_file(std::string const& file_path) {
 

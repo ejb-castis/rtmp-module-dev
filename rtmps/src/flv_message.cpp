@@ -227,16 +227,14 @@ bool process_flv_es_message(
       uint8_t key = frame.keyframe_;
 
       if (get_video(bf, *video_es, frame, len)) {
-        flv_util::buffer_t* video_ts_es = new flv_util::buffer_t(video_es->len_);
-        parsingflv::replace_nalu_strat_code_from_mp4_to_ts(4, *video_es, *video_ts_es);
-        delete video_es;
+        parsingflv::replace_nalu_start_code_from_mp4_to_ts(4, *video_es);
 
         media_publish_es_ptr media_es =
         make_media_es(castis::streamer::video, 
-        video_ts_es,
+        video_es,
         context->frame_number_ + 1,
         key, pts, dts, 
-        video_ts_es->len_, ec);
+        video_es->len_, ec);
 
         context->media_es_.push_back(media_es);
         ++context->frame_number_;
@@ -412,16 +410,14 @@ bool process_flv_es_dump_message(
       uint8_t key = frame.keyframe_;
 
       if (get_video(bf, *video_es, frame, len)) {
-        flv_util::buffer_t* video_ts_es = new flv_util::buffer_t(video_es->len_);
-        parsingflv::replace_nalu_strat_code_from_mp4_to_ts(4, *video_es, *video_ts_es);
-        delete video_es;
+        parsingflv::replace_nalu_start_code_from_mp4_to_ts(4, *video_es);
 
         media_publish_es_ptr media_es =
         make_media_es(castis::streamer::video, 
-        video_ts_es,
+        video_es,
         context->frame_number_ + 1,
         key, pts, dts, 
-        video_ts_es->len_, ec);
+        video_es->len_, ec);
 
         context->media_es_.push_back(media_es);
         ++context->frame_number_;

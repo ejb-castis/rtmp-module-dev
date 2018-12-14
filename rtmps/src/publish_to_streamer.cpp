@@ -256,8 +256,6 @@ void publish_to_streamer(castis::streamer::media_publish_es_context_ptr context,
   rtmp_protocol::MediaMessage_ptr request) {
   using namespace castis::streamer;
 
-  RTMPLOGF(debug,"pulishing stream_type[%1%],stream_name[%2%],client_id[%3%]",context->stream_type_, context->stream_name_, context->client_id_);
-
   unsigned char* data = request->get_data().get();
   std::size_t data_len = request->get_data_len();
   int ec; 
@@ -268,10 +266,6 @@ void publish_to_streamer(castis::streamer::media_publish_es_context_ptr context,
     static_cast<uint32_t>(request->get_header()->timestamp_),
     static_cast<uint32_t>(request->get_header()->msg_length_),  
     data, data_len, ec);
-
-  std::cout << "process_flv_es_message. ec[" << ec << "]" << ",ret[" << ret << "],";
-  std::cout << "context[" << to_string(context) << "]" ;
-  std::cout << std::endl;
 
   RTMPLOGF(debug,"process es. context[%1%],stream_type[%2%],stream_name[%3%],client_id[%4%]",to_string(context), context->stream_type_, context->stream_name_, context->client_id_);
 

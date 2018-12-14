@@ -53,10 +53,9 @@ bool get_video(unsigned char*& buffer,
   flv_util::buffer_t& video_es, flv::video_frame_t& video_frame, 
   std::size_t& buffer_len);  
 void get_avc_end_of_sequence(unsigned char*& buffer, flv_util::buffer_t& eos, std::size_t& buffer_len);
-void replace_nalu_strat_code_from_mp4_to_ts(
+void replace_nalu_start_code_from_mp4_to_ts(
   unsigned char nal_start_code_length,
-  flv_util::buffer_t const& mp4_video_es, flv_util::buffer_t& ts_video_es);
-
+  flv_util::buffer_t const& mp4_video_es);
 bool parsing_flv(std::string const& file_path);
 
 } // namespace parsingflv

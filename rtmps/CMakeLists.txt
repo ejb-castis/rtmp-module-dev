@@ -26,6 +26,7 @@ include_directories (
 add_compile_options(-DBOOST_COROUTINES_NO_DEPRECATION_WARNING=1 -g)
 
 add_subdirectory(src)
+add_subdirectory(unittest)
 
 #add_subdirectory(example EXCLUDE_FROM_ALL)
 #add_subdirectory(tool EXCLUDE_FROM_ALL)
