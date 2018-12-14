@@ -59,6 +59,17 @@ public:
 
 typedef std::shared_ptr<MediaPublishEs> media_publish_es_ptr;
 
+struct RecordingFlvContext {
+  bool write_audio_header_done{false};
+  bool write_video_header_done{false};
+  bool write_flv_header_done{false};
+
+  unsigned int audio_index{0};
+  unsigned int video_index{0};
+  unsigned int media_index{0};
+
+};
+
 struct MediaPublishEsContext {
 public:  
   std::string publish_id_;
@@ -68,7 +79,9 @@ public:
   std::vector<unsigned char> video_eos_;
   
   uint8_t nal_startcode_len_{4};
-  
+  uint32_t video_timestamp_delta_{0};
+  uint32_t audio_timestamp_delta_{0};
+
   std::string provider_;
   std::string stream_name_;
   uint8_t recording_{1};
@@ -80,15 +93,17 @@ public:
   uint64_t frame_number_{0};
   uint64_t audio_frame_number_{0};
   uint64_t video_frame_number_{0};
+
+  RecordingFlvContext record_flv_context_;
 };
 
 typedef std::shared_ptr<MediaPublishEsContext> media_publish_es_context_ptr;
 
-std::string to_string(MediaPublishEsContext& context);
+std::string to_string(castis::streamer::media_publish_es_context_ptr& context);
 
-bool ready_to_send(castis::streamer::MediaPublishEsContext& context);
-bool end_of_video_es(castis::streamer::MediaPublishEsContext& context);
-media_publish_es_ptr make_media_es(
+bool ready_to_send(castis::streamer::media_publish_es_context_ptr& context);
+bool end_of_video_es(castis::streamer::media_publish_es_context_ptr& context);
+castis::streamer::media_publish_es_ptr make_media_es(
   media_es_type_t type,
   flv_util::buffer_t* const data,
   uint64_t frame_number,
@@ -110,13 +125,13 @@ enum FLV_ES_TYPE {
   FLV_VIDEO_ES = 9
 };
 
-bool read_flv_es_dump_file(castis::streamer::MediaPublishEsContext& context, std::string const& file_path);
+bool read_flv_es_dump_file(castis::streamer::media_publish_es_context_ptr& context, std::string const& file_path);
 bool process_flv_es_message(
-  castis::streamer::MediaPublishEsContext& context, 
+  castis::streamer::media_publish_es_context_ptr& context, 
   unsigned char* const buffer, 
   std::size_t const buffer_size,
   int& ec);
-void read_flv_es_dump(castis::streamer::MediaPublishEsContext& context, unsigned int start, unsigned int end);
+void read_flv_es_dump(castis::streamer::media_publish_es_context_ptr& context, unsigned int start, unsigned int end);
 
 
 } // namespace flv_message

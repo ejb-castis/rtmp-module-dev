@@ -21,13 +21,18 @@ include_directories (
   rtmps/src/protocol/control_message
   rtmps/src/protocol/data_message
   rtmps/src/protocol/media_message
-  rapidjson
+  CiUtils/Externals/Include
+  CiUtils/Include
+  http_asynch_client
+  rapidjson/inlcude
   streamer
   src
   .
 )
 add_compile_options(-DBOOST_COROUTINES_NO_DEPRECATION_WARNING=1 -g)
 
+add_subdirectory(CiUtils)
+add_subdirectory(http_async_client)
 add_subdirectory(rtmps)
 
 set(SRCS 
@@ -39,6 +44,8 @@ add_executable(${PROJECT_NAME} ${SRCS})
 target_link_libraries(${PROJECT_NAME}
   ${Boost_LIBRARIES}
   rtmps
+  http_async_client
+  CiUtils
   ssl
   crypto
   pthread

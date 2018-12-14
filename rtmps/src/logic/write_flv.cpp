@@ -25,9 +25,6 @@ void write_1byte(uint8_t value, char*& dst) {
 }
 
 void write_flv_header(const std::string& flv_file_name) {
-  
-  boost::filesystem::path file_path("dump");
-  boost::filesystem::create_directories(file_path);
 
   std::ofstream flvfile(flv_file_name, std::ios::binary | std::ofstream::out | std::ofstream::app );
 
@@ -52,28 +49,18 @@ void write_flv_header(const std::string& flv_file_name) {
   flvfile.close();
 }
 
-void write_flv_audio_dump(const char* data, std::size_t length) {
-  static int audio_index = 0;
+void write_flv_audio_dump(const std::string& file_name, unsigned& audio_index, const char* data, std::size_t length) {
   ++audio_index;
-
-  boost::filesystem::path file_path("dump/audio");
-  boost::filesystem::create_directories(file_path);
-
-  std::string flv_file_name = "dump/audio/audio.dump." + std::to_string(audio_index);
+  std::string flv_file_name = file_name + "." + std::to_string(audio_index);
   std::ofstream flvfile(flv_file_name, std::ios::binary | std::ofstream::out | std::ofstream::app );
 
   flvfile.write(data, length);
   flvfile.flush();
   flvfile.close();  
 }
-void write_flv_video_dump(const char* data, std::size_t length) {
-  static int video_index = 0;
-
-  boost::filesystem::path file_path("dump/video");
-  boost::filesystem::create_directories(file_path);
-
+void write_flv_video_dump(const std::string& file_name, unsigned& video_index, const char* data, std::size_t length) {
   ++video_index;
-  std::string flv_file_name = "dump/video/video.dump." + std::to_string(video_index);
+  std::string flv_file_name = file_name + "." + std::to_string(video_index);
   std::ofstream flvfile(flv_file_name, std::ios::binary | std::ofstream::out | std::ofstream::app );
 
   flvfile.write(data, length);
@@ -81,8 +68,8 @@ void write_flv_video_dump(const char* data, std::size_t length) {
   flvfile.close();
 }
 
-void write_flv_media_dump(MediaMessage_ptr& request) {
-  static unsigned int media_index = 0;
+void write_flv_media_dump(castis::streamer::media_publish_es_context_ptr& context, MediaMessage_ptr& request) {
+  unsigned int& media_index = context->record_flv_context_.media_index;
 
   const char* data =  reinterpret_cast<const char*>(request->get_data().get());
   std::size_t data_length = request->get_data_len();
@@ -95,11 +82,15 @@ void write_flv_media_dump(MediaMessage_ptr& request) {
   write_4byte(request->get_header()->timestamp_, header_ptr);  
   write_4byte(request->get_header()->msg_length_, header_ptr);  
 
-  boost::filesystem::path file_path("dump/flv_es");
+  std::string stream_name = context->stream_name_;
+  std::string client_id = context->client_id_;
+  
+  if (stream_name.empty()) stream_name="anonymous";
+  boost::filesystem::path file_path("dump/" + stream_name + "/media");
   boost::filesystem::create_directories(file_path);
   ++media_index;
 
-  std::string flv_file_name = "dump/flv_es/flv_es.dump." + std::to_string(media_index);
+  std::string flv_file_name = file_path.string() + "/" + stream_name + ".dump." + std::to_string(media_index);
   std::ofstream flvfile(flv_file_name, std::ios::binary | std::ofstream::out | std::ofstream::app );
 
   flvfile.write(header, header_length);
@@ -108,21 +99,32 @@ void write_flv_media_dump(MediaMessage_ptr& request) {
   flvfile.close();  
 }
 
-void write_flv(MediaMessage_ptr& request) {
+void write_flv(castis::streamer::media_publish_es_context_ptr context, MediaMessage_ptr& request) {
   
-  static bool write_audio_header_done = false;
-  static bool write_video_header_done = false;
-  static bool write_flv_header_done = false;
-  static uint32_t video_timestamp_delta = 0;
-  static uint32_t audio_timestamp_delta = 0;
+  bool& write_audio_header_done = context->record_flv_context_.write_audio_header_done;
+  bool& write_video_header_done = context->record_flv_context_.write_audio_header_done;
+  bool& write_flv_header_done = context->record_flv_context_.write_flv_header_done;
+  uint32_t video_timestamp_delta = context->video_timestamp_delta_;
+  uint32_t audio_timestamp_delta = context->audio_timestamp_delta_;
 
-  write_flv_media_dump(request);
+  write_flv_media_dump(context, request);
+  std::string stream_name = context->stream_name_;
+  if (stream_name.empty()) stream_name="anonymous";
 
   auto publish_type = PublishType::record;
   switch(publish_type) {
     case PublishType::record: {
 
-      std::string flv_file_name = "dump/dump.flv";
+      boost::filesystem::path dump_file_path("dump/"+stream_name);
+      boost::filesystem::create_directories(dump_file_path);
+      
+      boost::filesystem::path audio_dump_file_path = dump_file_path / "audio";
+      boost::filesystem::create_directories(audio_dump_file_path);
+
+      boost::filesystem::path video_dump_file_path = dump_file_path / "video";
+      boost::filesystem::create_directories(video_dump_file_path);
+
+      std::string flv_file_name = dump_file_path.string() +"/"+  stream_name + ".flv";
 
       if (write_flv_header_done == false) {
           write_flv_header_done = true;    
@@ -135,13 +137,11 @@ void write_flv(MediaMessage_ptr& request) {
 
         if (write_audio_header_done == false) {
           write_audio_header_done = true;    
-
-          audio_timestamp_delta = 0; // 0 - first timestamp of the first audio message 
         }
 
         // refer to adobe's flv tag definition and etc.
-        u_char                      hdr[11], *p, *ph;
-        uint32_t                    timestamp_in_mill, tag_size;
+        u_char hdr[11], *p, *ph;
+        uint32_t timestamp_in_mill, tag_size;
 
         // timestamp value of first tag MUST be zero, 
         // otherwise all timestamp value should be shift some delta.
@@ -188,7 +188,9 @@ void write_flv(MediaMessage_ptr& request) {
         // write content        
         flvfile.write(reinterpret_cast<const char*>(request->get_data().get()), request->get_data_len());
 
-        write_flv_audio_dump(reinterpret_cast<const char*>(request->get_data().get()), request->get_data_len());
+        std::string audio_flv_file_name = audio_dump_file_path.string() +"/"+  stream_name + ".dump";
+
+        write_flv_audio_dump(audio_flv_file_name, context->record_flv_context_.audio_index, reinterpret_cast<const char*>(request->get_data().get()), request->get_data_len());
 
         // write tag footer
         ph = hdr;
@@ -216,13 +218,11 @@ void write_flv(MediaMessage_ptr& request) {
 
         if (write_video_header_done == false) {
           write_video_header_done = true;    
-
-          video_timestamp_delta = 0; // 0 - first timestamp of the first video message 
         }
 
         // from nginx
-        u_char                      hdr[11], *p, *ph;
-        uint32_t                    timestamp_in_mill, tag_size;
+        u_char hdr[11], *p, *ph;
+        uint32_t timestamp_in_mill, tag_size;
         timestamp_in_mill = request->get_header()->timestamp_;
         timestamp_in_mill = timestamp_in_mill + video_timestamp_delta;
 
@@ -254,7 +254,8 @@ void write_flv(MediaMessage_ptr& request) {
         // write content
         flvfile.write(reinterpret_cast<const char*>(request->get_data().get()), request->get_data_len());
 
-        write_flv_video_dump(reinterpret_cast<const char*>(request->get_data().get()), request->get_data_len());
+        std::string video_flv_file_name = video_dump_file_path.string() +"/"+  stream_name + ".dump";
+        write_flv_video_dump(video_flv_file_name, context->record_flv_context_.video_index, reinterpret_cast<const char*>(request->get_data().get()), request->get_data_len());
 
         ph = hdr;
         p = (u_char*)&tag_size;

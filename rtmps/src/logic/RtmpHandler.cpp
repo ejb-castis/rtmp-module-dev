@@ -9,7 +9,7 @@
 #include "../protocol/data_message/RtmpSampleAccess.hpp"
 #include "../protocol/data_message/OnMetaData.hpp"
 #include "StreamManager.hpp"
-#include "../../../src/rtmpmodulelogger.h"
+#include "rtmpmodulelogger.h"
 
 #include <iostream>
 #include <algorithm>
@@ -414,7 +414,7 @@ void RtmpHandler::handle_play(Play_ptr request) {
 
 
 void RtmpHandler::handle_media_message(MediaMessage_ptr request) {
-  write_flv(request);
+  write_flv(context_, request);
   publish_to_streamer(context_, request);
 }
 

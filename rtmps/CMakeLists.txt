@@ -18,6 +18,9 @@ include_directories (
   protocol
   src
   .
+  ${CMAKE_SOURCE_DIR}/http_async_client
+  ${CMAKE_SOURCE_DIR}/rapidjson/include
+  ${CMAKE_SOURCE_DIR}/streamer
 )
 
 add_compile_options(-DBOOST_COROUTINES_NO_DEPRECATION_WARNING=1 -g)

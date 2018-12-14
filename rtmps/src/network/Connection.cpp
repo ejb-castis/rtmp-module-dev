@@ -18,10 +18,10 @@
 #include <boost/pointer_cast.hpp>
 #include <boost/thread.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
-#include "../../../src/rtmpmodulelogger.h"
+#include "rtmpmodulelogger.h"
 
 #define READ_BUF_SIZE 8192
-#define CONTINUOUS_SEND_INTERVAL_MS 5
+#define CONTINUOUS_SEND_INTERVAL_MS 100
 
 namespace rtmp_network {
 
@@ -45,7 +45,6 @@ Connection::Connection(boost::asio::io_service& io_service,
 }
 
 Connection::~Connection() {
-//  std::cout << "connection (" << id_ << ") : destructor" << std::endl;
 }
 
 boost::asio::ip::tcp::socket& Connection::socket() {

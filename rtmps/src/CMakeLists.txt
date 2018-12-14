@@ -8,6 +8,9 @@ project(${PROJECT_NAME})
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
 include_directories(
+${CMAKE_SOURCE_DIR}/http_async_client
+${CMAKE_SOURCE_DIR}/streamer
+${CMAKE_SOURCE_DIR}/rapidjson/inlcude
 common
 logic
 network

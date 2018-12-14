@@ -40,15 +40,15 @@ std::string to_string(MediaPublishEs* es)
   return oss.str();  
 }
 
-std::string to_string(MediaPublishEsContext& context)
+std::string to_string(media_publish_es_context_ptr& context)
 {
   std::ostringstream oss;
-  oss << "publish_id[" << context.publish_id_ << "],"; 
-  oss << "frame_number[" << context.frame_number_ << "],"; 
-  oss << "video_frame_number[" << context.video_frame_number_ << "],"; 
-  oss << "audio_frame_number[" << context.audio_frame_number_ << "],"; 
-  if (context.media_es_.back().get()) {
-    oss << "last es_frame_data[" << to_string(context.media_es_.back().get()) << "]";
+  oss << "publish_id[" << context->publish_id_ << "],"; 
+  oss << "frame_number[" << context->frame_number_ << "],"; 
+  oss << "video_frame_number[" << context->video_frame_number_ << "],"; 
+  oss << "audio_frame_number[" << context->audio_frame_number_ << "],"; 
+  if (context->media_es_.back().get()) {
+    oss << "last es_frame_data[" << to_string(context->media_es_.back().get()) << "]";
   } else {
     oss << "no es_frame_data" ; 
   }
@@ -57,20 +57,20 @@ std::string to_string(MediaPublishEsContext& context)
   return oss.str();  
 }
 
-bool ready_to_send(MediaPublishEsContext& context) {
-  if (not context.audio_init_es_.codecInfo.empty() and
-    not context.video_init_es_.codecInfo.empty() and
-    context.video_frame_number_ >= READY_TO_SEND_VIDEO_FRAME_COUNT and
-    context.audio_frame_number_ >= READY_TO_SEND_AUDIO_FRAME_COUNT ) {
+bool ready_to_send(media_publish_es_context_ptr& context) {
+  if (not context->audio_init_es_.codecInfo.empty() and
+    not context->video_init_es_.codecInfo.empty() and
+    context->video_frame_number_ >= READY_TO_SEND_VIDEO_FRAME_COUNT and
+    context->audio_frame_number_ >= READY_TO_SEND_AUDIO_FRAME_COUNT ) {
     return true;
   }
 
   return false;  
 }
 
-bool end_of_video_es(MediaPublishEsContext& context) {
-  if (not context.video_eos_.empty() or
-    context.media_es_.empty()) {
+bool end_of_video_es(media_publish_es_context_ptr& context) {
+  if (not context->video_eos_.empty() or
+    context->media_es_.empty()) {
     return true;
   }
   return false;  
@@ -124,7 +124,7 @@ media_publish_es_ptr make_media_es(
 namespace flv_message {
 
 bool process_flv_es_message(
-  MediaPublishEsContext& context, 
+  media_publish_es_context_ptr& context, 
   unsigned char* const buffer, 
   std::size_t const buffer_size,
   int& ec) {
@@ -145,8 +145,8 @@ bool process_flv_es_message(
       uint32_t sample_rate;
       uint32_t channel_count;
       if (get_aac_header(bf, sample_rate, channel_count, len)) {
-        context.audio_init_es_.sample_rate = sample_rate;
-        context.audio_init_es_.channel_count = channel_count;
+        context->audio_init_es_.sample_rate = sample_rate;
+        context->audio_init_es_.channel_count = channel_count;
         
         std::vector<unsigned char> codec_info;
         std::vector<unsigned char> sv = to_vector(sample_rate);
@@ -154,7 +154,7 @@ bool process_flv_es_message(
         
         codec_info.insert(codec_info.begin(), cv.begin(), cv.end());
         codec_info.insert(codec_info.begin(), sv.begin(), sv.end());
-        context.audio_init_es_.codecInfo = codec_info;
+        context->audio_init_es_.codecInfo = codec_info;
 
         //std::cout << "aac_sequence_header parsed" << std::endl;
       } else {
@@ -170,13 +170,13 @@ bool process_flv_es_message(
         media_publish_es_ptr media_es =
         make_media_es(castis::streamer::audio, 
         audio_es,
-        context.frame_number_ + 1,
+        context->frame_number_ + 1,
         1, pts, dts, 
         audio_es->len_, ec);
         
-        context.media_es_.push_back(media_es);
-        ++context.frame_number_;
-        ++context.audio_frame_number_;
+        context->media_es_.push_back(media_es);
+        ++context->frame_number_;
+        ++context->audio_frame_number_;
 
         //std::cout << "aac_data parsed" << std::endl;
       }
@@ -201,19 +201,19 @@ bool process_flv_es_message(
       uint8_t nal_startcode_len;
       if (get_first_sps_and_first_pps_from_avc_sequence_header(
         bf, sps, pps, nal_startcode_len, len)) {
-        context.video_init_es_.sps = to_vector(sps);
-        context.video_init_es_.pps = to_vector(pps);
-        context.nal_startcode_len_ = nal_startcode_len;
+        context->video_init_es_.sps = to_vector(sps);
+        context->video_init_es_.pps = to_vector(pps);
+        context->nal_startcode_len_ = nal_startcode_len;
 
         std::vector<unsigned char> codec_info;
         
         unsigned char d[] = { 0x00,0x00,0x00,0x01 };
-        codec_info.insert (codec_info.begin(), context.video_init_es_.pps.begin(), context.video_init_es_.pps.end());
+        codec_info.insert (codec_info.begin(), context->video_init_es_.pps.begin(), context->video_init_es_.pps.end());
         codec_info.insert (codec_info.begin(), d, d+4);
-        codec_info.insert (codec_info.begin(), context.video_init_es_.sps.begin(), context.video_init_es_.sps.end());
+        codec_info.insert (codec_info.begin(), context->video_init_es_.sps.begin(), context->video_init_es_.sps.end());
         codec_info.insert (codec_info.begin(), d, d+4);
 
-        context.video_init_es_.codecInfo = codec_info;
+        context->video_init_es_.codecInfo = codec_info;
 
         //std::cout << "avc_sequence_header parsed" << std::endl;
       } else {
@@ -235,13 +235,13 @@ bool process_flv_es_message(
         media_publish_es_ptr media_es =
         make_media_es(castis::streamer::video, 
         video_ts_es,
-        context.frame_number_ + 1,
+        context->frame_number_ + 1,
         key, pts, dts, 
         video_ts_es->len_, ec);
 
-        context.media_es_.push_back(media_es);
-        ++context.frame_number_;
-        ++context.video_frame_number_;
+        context->media_es_.push_back(media_es);
+        ++context->frame_number_;
+        ++context->video_frame_number_;
 
         //std::cout << "avc_video parsed" << std::endl;
       } else {
@@ -252,7 +252,7 @@ bool process_flv_es_message(
     } else if (is_avc_end_of_sequence(bf)) {
       buffer_t eos(len);
       get_avc_end_of_sequence(bf, eos, len);
-      context.video_eos_ = to_vector(eos);
+      context->video_eos_ = to_vector(eos);
     } else {
       ec = 1;
       std::cout << "parsing video data fail" << std::endl;
@@ -275,7 +275,7 @@ bool process_flv_es_message(
 
 
 
-bool read_flv_es_dump_file(MediaPublishEsContext& context, std::string const& file_path) {
+bool read_flv_es_dump_file(media_publish_es_context_ptr& context, std::string const& file_path) {
 
   std::cout << "open >" << file_path << std::endl;
 
@@ -307,7 +307,7 @@ bool read_flv_es_dump_file(MediaPublishEsContext& context, std::string const& fi
 }
 
 
-void read_flv_es_dump(MediaPublishEsContext& context, unsigned int start, unsigned int end) {
+void read_flv_es_dump(media_publish_es_context_ptr& context, unsigned int start, unsigned int end) {
 
   std::string directory = "/data/project/git/rtmp-module/build/dump/flv_es";
   std::string file_name = "flv_es.dump";
