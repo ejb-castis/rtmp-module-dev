@@ -38,6 +38,9 @@ unsigned int RtmpHandler::get_id() {
 void RtmpHandler::notify_disconnect() {
   RTMPLOGF(info,"connection closed. ready to end stream. stream_type[%1%],stream_name[%2%],client_id[%3%]",context_->stream_type_, context_->stream_name_, context_->client_id_);
   context_->ready_to_end_of_stream_ = true;
+
+  // send remains
+  publish_to_streamer(context_);
 }
 
 void RtmpHandler::handle_request(rtmp_network::Message_ptr request) {
@@ -421,7 +424,7 @@ void RtmpHandler::handle_play(Play_ptr request) {
 
 
 void RtmpHandler::handle_media_message(MediaMessage_ptr request) {
-  //write_flv(context_, request);
+  write_flv(context_, request);
   publish_to_streamer(context_, request);
 }
 

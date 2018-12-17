@@ -2,6 +2,7 @@
 
 http://172.16.33.52:8080/brokering/live/baseball.mpg/master.m3u8
 http://172.16.33.52:8080/brokering/live/750k.mp4/master.m3u8
+http://172.16.33.52:8080/brokering/live/750k/master.m3u8
 
 http://172.16.33.52:8080/brokering/live/750k.mp4
 

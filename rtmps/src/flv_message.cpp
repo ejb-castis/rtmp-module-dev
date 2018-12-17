@@ -15,6 +15,7 @@
 
 #include "flv_message.h"
 #include "streamer/base64.h"
+#include "HTTPAsyncClient.h"
 
 using namespace castis::streamer;
 using namespace flv;

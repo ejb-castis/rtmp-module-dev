@@ -2,13 +2,15 @@
 #include "flv_util.h"
 #include <vector>
 #include <list>
+#include <memory>
+#include "../../http_async_client/HTTPAsyncClient.h"
 
 namespace castis {
 namespace streamer {
 
 typedef enum { video=1, audio=2 } media_es_type_t;
-const uint64_t READY_TO_SEND_AUDIO_FRAME_COUNT = 4;
-const uint64_t READY_TO_SEND_VIDEO_FRAME_COUNT = 4;
+const uint64_t READY_TO_SEND_AUDIO_FRAME_COUNT = 0;
+const uint64_t READY_TO_SEND_VIDEO_FRAME_COUNT = 0;
 
 struct AudioPublishEsInit {
 public:
@@ -103,6 +105,7 @@ public:
   uint64_t video_frame_number_{0};
 
   RecordingFlvContext record_flv_context_;
+  std::shared_ptr<castis::http::AsyncClient> client_;
 };
 
 typedef std::shared_ptr<MediaPublishEsContext> media_publish_es_context_ptr;

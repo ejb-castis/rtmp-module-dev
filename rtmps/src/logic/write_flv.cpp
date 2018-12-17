@@ -97,6 +97,26 @@ void write_flv_media_dump(castis::streamer::media_publish_es_context_ptr& contex
   flvfile.write(data, data_length);
   flvfile.flush();
   flvfile.close();  
+
+  if(request->get_header()->is_audio_msg()) {
+    boost::filesystem::path file_path("dump/" + stream_name + "/audio_messag_header");
+    boost::filesystem::create_directories(file_path);
+    std::string flv_file_name = file_path.string() + "/" + stream_name + ".audio.header." + std::to_string(context->record_flv_context_.audio_index+1);
+    std::ofstream flvfile(flv_file_name, std::ios::binary | std::ofstream::out | std::ofstream::app );
+    flvfile.write(header, header_length);
+    flvfile.flush();
+    flvfile.close();  
+  } else {
+    boost::filesystem::path file_path("dump/" + stream_name + "/video_messag_header");
+    boost::filesystem::create_directories(file_path);
+    std::string flv_file_name = file_path.string() + "/" + stream_name + ".video.header." + std::to_string(context->record_flv_context_.video_index+1);
+    std::ofstream flvfile(flv_file_name, std::ios::binary | std::ofstream::out | std::ofstream::app );
+    flvfile.write(header, header_length);
+    flvfile.flush();
+    flvfile.close();  
+  }
+
+
 }
 
 void write_flv(castis::streamer::media_publish_es_context_ptr context, MediaMessage_ptr& request) {
