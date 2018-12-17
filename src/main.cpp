@@ -22,7 +22,7 @@ int main() {
 
   const std::size_t num_threads = 1;
   const std::string rtmp_port = "1935";
-  const std::string ip = "127.0.0.1";
+  const std::string ip = "172.16.33.52";
 
   try {
     // start server with RtmpHandler and RtmpParser.
