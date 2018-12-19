@@ -1,3 +1,23 @@
+#2018-12-18
+
+ffmpeg 으로 publish 한 동영상을 flv 형태로 record 해서 
+ffplay 로 play 해보면 끊기지 않고 play 된다. 
+
+audio, video frame 을 dump 를 남겨서 timestamp 값을 검사했을 때에도
+timestamp 값이 거의 일정한 것을 알 수 있다. 
+
+streamer 와 연동했을 때, 끊기는 현상은 
+timestamp 보다는 
+
+1. rtmp-module 과 streamer 의 연동 시에 지연 문제가 있지 않나 싶다. 
+2. flv 를 ts es 로 바꿀 때, dts, pts 변환 시에 에러가 있을 수는 있을 것 같다. 
+
+
+ffmpeg 파일 자르기
+ffmpeg -i /data/bigbuckbunny_1500.mp4 -ss 0 -t 10 -vcodec copy -acodec copy 10s_1500k.mp4
+
+
+
 #2018-12-14
 
 http://172.16.33.52:8080/brokering/live/baseball.mpg/master.m3u8

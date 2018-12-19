@@ -256,7 +256,7 @@ void publish_to_streamer(castis::streamer::media_publish_es_context_ptr context,
 
   unsigned char* data = request->get_data().get();
   std::size_t data_len = request->get_data_len();
-  int ec; 
+  int ec=0; 
 
   bool ret = flv_message::process_flv_es_message(
     context, 
@@ -272,7 +272,7 @@ void publish_to_streamer(castis::streamer::media_publish_es_context_ptr context,
   {
     std::string url = "http://" + context->publish_live_addr_port_ + context->publish_live_uri_;
     std::string upload_id, publish_addr;
-    int ec;
+    int ec=0;
     begin_publish(url, context, publish_addr, upload_id, ec);
     if (ec!=0) {
       std::cout << "begin publish fail. ec[" << ec << "]" << std::endl;
@@ -285,11 +285,8 @@ void publish_to_streamer(castis::streamer::media_publish_es_context_ptr context,
     context->client_ = std::make_shared<castis::http::AsyncClient>();
   }
   {
-    if (state == MediaPublishEsContext::init && 
-      (ready_to_send(context) || context->ready_to_end_of_stream_)
-      
-      ) {
-        int ec;
+    if (state == MediaPublishEsContext::init && ready_to_send(context)) {
+        int ec=0;
         init_publish(context->client_.get(), context, ec);
         if(ec!=0) {
           std::cout << "init publish fail. ec[" << ec << "]" << std::endl;
@@ -301,7 +298,7 @@ void publish_to_streamer(castis::streamer::media_publish_es_context_ptr context,
     while(state == MediaPublishEsContext::publishing && not context->media_es_.empty()) {
 
       std::cout << "media_es_size[" << context->media_es_.size() << "]" << std::endl;
-      int ec;
+      int ec=0;
       publish_es(context->client_.get(), context, ec);
       if(ec!=0) {
         std::cout << "publish es fail. ec[" << ec << "]" << std::endl;
@@ -313,7 +310,7 @@ void publish_to_streamer(castis::streamer::media_publish_es_context_ptr context,
   }
   if (context->media_es_.empty() &&
       (context->ready_to_end_of_stream_ || end_of_video_es(context))) {
-    int ec;
+    int ec=0;
     end_publish(context, ec);
     if(ec!=0) {
       std::cout << "end publish fail. ec[" << ec << "]" << std::endl;
@@ -333,7 +330,7 @@ void publish_to_streamer(castis::streamer::media_publish_es_context_ptr context)
   {
     std::string url = "http://" + context->publish_live_addr_port_ + context->publish_live_uri_;
     std::string upload_id, publish_addr;
-    int ec;
+    int ec=0;
     begin_publish(url, context, publish_addr, upload_id, ec);
     if (ec!=0) {
       std::cout << "begin publish fail. ec[" << ec << "]" << std::endl;
@@ -346,11 +343,8 @@ void publish_to_streamer(castis::streamer::media_publish_es_context_ptr context)
     context->client_ = std::make_shared<castis::http::AsyncClient>();
   }
   {
-    if (state == MediaPublishEsContext::init && 
-      (ready_to_send(context) || context->ready_to_end_of_stream_)
-      
-      ) {
-        int ec;
+    if (state == MediaPublishEsContext::init && ready_to_send(context)) {
+        int ec=0;
         init_publish(context->client_.get(), context, ec);
         if(ec!=0) {
           std::cout << "init publish fail. ec[" << ec << "]" << std::endl;
@@ -358,23 +352,23 @@ void publish_to_streamer(castis::streamer::media_publish_es_context_ptr context)
         }
         state = MediaPublishEsContext::publishing;
     }
-
     while(state == MediaPublishEsContext::publishing && not context->media_es_.empty()) {
 
       std::cout << "media_es_size[" << context->media_es_.size() << "]" << std::endl;
-      int ec;
+      int ec=0;
       publish_es(context->client_.get(), context, ec);
       if(ec!=0) {
         std::cout << "publish es fail. ec[" << ec << "]" << std::endl;
         return;
       }        
       context->media_es_.pop_front();
-      
     }
   }
   if (context->media_es_.empty() &&
       (context->ready_to_end_of_stream_ || end_of_video_es(context))) {
-    int ec;
+
+    //std::this_thread::sleep_for(std::chrono::milliseconds(30000));        
+    int ec=0;
     end_publish(context, ec);
     if(ec!=0) {
       std::cout << "end publish fail. ec[" << ec << "]" << std::endl;

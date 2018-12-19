@@ -64,16 +64,16 @@ std::string to_string(audio_frame_t& frame) {
 bool is_aac_audio(unsigned char* const & buffer) {
   uint16_t fmt_aac_type;
   get_2byte(buffer, fmt_aac_type); 
-  std::cout << "fmt_aac_type[" << to_hex(fmt_aac_type) << "]->";
+  //std::cout << "fmt_aac_type[" << to_hex(fmt_aac_type) << "]->";
     
   unsigned char fmt = (fmt_aac_type & 0xff00) >> 8;
-  std::cout << "fmt[" << to_hex(fmt) << "],";
+  //std::cout << "fmt[" << to_hex(fmt) << "],";
 
   unsigned char sound_format = (fmt & 0xf0) >> 4;
-  std::cout << "sound_format[" << to_hex(sound_format) << "]" << std::endl;
+  //std::cout << "sound_format[" << to_hex(sound_format) << "]" << std::endl;
 
   unsigned char aac_packet_type = fmt_aac_type & 0x00ff;
-  std::cout << "aac_packet_type[" << to_hex(aac_packet_type) << "]" << std::endl;
+  //std::cout << "aac_packet_type[" << to_hex(aac_packet_type) << "]" << std::endl;
 
   if (sound_format == FLV_AAC && 
     aac_packet_type == FLV_AAC_RAW) {
@@ -86,25 +86,25 @@ bool is_aac_audio(unsigned char* const & buffer) {
 bool is_aac_sequence_header(unsigned char* const & buffer) {
   uint16_t fmt_aac_type;
   get_2byte(buffer, fmt_aac_type); 
-  std::cout << "fmt_aac_type[" << to_hex(fmt_aac_type) << "]->";
+  //std::cout << "fmt_aac_type[" << to_hex(fmt_aac_type) << "]->";
 
   unsigned char fmt = (fmt_aac_type & 0xff00) >> 8;
-  std::cout << "fmt[" << to_hex(fmt) << "],";
+  //std::cout << "fmt[" << to_hex(fmt) << "],";
 
   unsigned char sound_format = (fmt & 0xf0) >> 4;
-  std::cout << "sound_format[" << to_hex(sound_format) << "], ";
+  //std::cout << "sound_format[" << to_hex(sound_format) << "], ";
 
   unsigned char sound_rate = fmt & 0x0c >> 2;
-  std::cout << "sound_rate[" << to_hex(sound_rate) << "],";
+  //std::cout << "sound_rate[" << to_hex(sound_rate) << "],";
 
   unsigned char sound_size = fmt & 0x02 >> 1;
-  std::cout << "sound_size[" << to_hex(sound_size) << "],";
+  //std::cout << "sound_size[" << to_hex(sound_size) << "],";
   
   unsigned char sound_type = fmt & 0x01;
-  std::cout << "sound_type[" << to_hex(sound_type) << "]" << std::endl;
+  //std::cout << "sound_type[" << to_hex(sound_type) << "]" << std::endl;
 
   unsigned char aac_packet_type = fmt_aac_type & 0x00ff;
-  std::cout << "aac_packet_type[" << to_hex(aac_packet_type) << "]" << std::endl;
+  //std::cout << "aac_packet_type[" << to_hex(aac_packet_type) << "]" << std::endl;
 
   if (sound_format == FLV_AAC && 
     aac_packet_type == FLV_AAC_SEQUENCE_HEADER) {
@@ -142,10 +142,10 @@ bool get_aac_header(unsigned char*& buffer, uint32_t& sample_rate, uint32_t& cha
   unsigned char sound_format = (fmt & 0xf0) >> 4;
   unsigned char aac_packet_type = fmt_aac_type & 0x00ff;
 
-  std::cout << "fmt_aac_type[" << to_hex(fmt_aac_type) << "]->";
-  std::cout << "fmt[" << to_hex(fmt) << "],";
-  std::cout << "sound_format[" << to_hex(sound_format) << "]" << std::endl;;
-  std::cout << "aac_packet_type[" << to_hex(aac_packet_type) << "]" << std::endl;
+  //std::cout << "fmt_aac_type[" << to_hex(fmt_aac_type) << "]->";
+  //std::cout << "fmt[" << to_hex(fmt) << "],";
+  //std::cout << "sound_format[" << to_hex(sound_format) << "]" << std::endl;;
+  //std::cout << "aac_packet_type[" << to_hex(aac_packet_type) << "]" << std::endl;
 
   if (sound_format != FLV_AAC && 
     aac_packet_type != FLV_AAC_SEQUENCE_HEADER) {
@@ -175,10 +175,10 @@ bool get_aac_header(unsigned char*& buffer, uint32_t& sample_rate, uint32_t& cha
 
   if (audio_object_type == 31) {
     audio_object_type = (((hb & 0x07) << 3) | ((lb) >> 5)) + 32 ; //  next 6 th bit + 32
-    std::cout << "31 case: audio_object_type[" << to_hex(audio_object_type) << "]" << std::endl;
+    //std::cout << "31 case: audio_object_type[" << to_hex(audio_object_type) << "]" << std::endl;
 
     sample_rate_index =((lb >> 1) & 0x0f);
-    std::cout << "sample_rate_index[" << to_hex(sample_rate_index) << "]" << std::endl;;
+    //std::cout << "sample_rate_index[" << to_hex(sample_rate_index) << "]" << std::endl;;
 
     if (sample_rate_index == 0x0f) {
       uint32_t sample_rate_channel_config = 0; 
@@ -191,8 +191,8 @@ bool get_aac_header(unsigned char*& buffer, uint32_t& sample_rate, uint32_t& cha
       read_1byte(buffer, b3, buffer_len); 
       channel_config = ((sample_rate_channel_config & 0x01) << 3) | ((b3) >> 5 );  
       
-      std::cout << "sample_rate[" << sample_rate << "]" << std::endl;;
-      std::cout << "channel_config[" << to_hex(channel_config) << "]" << std::endl;;
+      //std::cout << "sample_rate[" << sample_rate << "]" << std::endl;;
+      //std::cout << "channel_config[" << to_hex(channel_config) << "]" << std::endl;;
 
     } else {
       sample_rate = SamplingRates[sample_rate_index];
@@ -201,19 +201,19 @@ bool get_aac_header(unsigned char*& buffer, uint32_t& sample_rate, uint32_t& cha
       read_1byte(buffer, b3, buffer_len); 
       channel_config = ((lb & 0x01) << 3) | ((b3) >> 5 );  
 
-      std::cout << "sample_rate[" << sample_rate << "]" << std::endl;;
-      std::cout << "channel_config[" << to_hex(channel_config) << "]" << std::endl;;
+      //std::cout << "sample_rate[" << sample_rate << "]" << std::endl;;
+      //std::cout << "channel_config[" << to_hex(channel_config) << "]" << std::endl;;
     }
 
   } else {
 
-    std::cout << "audio_object_type[" << to_hex(audio_object_type) << "]" << std::endl;;
+    //std::cout << "audio_object_type[" << to_hex(audio_object_type) << "]" << std::endl;;
 
     sample_rate_index = 
           ((hb << 1) & 0x0f) | // low 3bit << 1 +
           ((lb & 0x80) >> 7);   // high 1 bit of low byte
 
-    std::cout << "sample_rate_index[" << to_hex(sample_rate_index) << "]" << std::endl;;
+    //std::cout << "sample_rate_index[" << to_hex(sample_rate_index) << "]" << std::endl;;
 
     if ( sample_rate_index == 0x0f ) {
       uint32_t sample_rate_channel_config = 0; 
@@ -223,20 +223,20 @@ bool get_aac_header(unsigned char*& buffer, uint32_t& sample_rate, uint32_t& cha
         ((sample_rate_channel_config & 0xffff80) >> 7 ); // 17 bit
       channel_config = ( sample_rate_channel_config >> 3 ) & 0x00000f ;
 
-      std::cout << "sample_rate[" << sample_rate << "]" << std::endl;;
-      std::cout << "channel_config[" << to_hex(channel_config) << "]" << std::endl;;
+      //std::cout << "sample_rate[" << sample_rate << "]" << std::endl;;
+      //std::cout << "channel_config[" << to_hex(channel_config) << "]" << std::endl;;
 
     } else {
       sample_rate = SamplingRates[sample_rate_index];
       channel_config = ( lb >> 3 ) & 0x0f;  
 
-      std::cout << "sample_rate[" << sample_rate << "]" << std::endl;;
-      std::cout << "channel_config[" << to_hex(channel_config) << "]" << std::endl;;
+      //std::cout << "sample_rate[" << sample_rate << "]" << std::endl;;
+      //std::cout << "channel_config[" << to_hex(channel_config) << "]" << std::endl;;
     }
   }
 
   channel_count = channel_config;
-  std::cout << "channel_count[" << channel_count << "]" << std::endl;;
+  //std::cout << "channel_count[" << channel_count << "]" << std::endl;;
 
   return true;  
 }
@@ -256,10 +256,10 @@ bool get_audio(unsigned char*& buffer, buffer_t& audio_es, audio_frame_t& audio_
 
   unsigned char aac_packet_type = fmt_aac_type & 0x00ff;
 
-  std::cout << "fmt_aac_type[" << to_hex(fmt_aac_type) << "]->";
-  std::cout << "fmt[" << to_hex(fmt) << "],";
-  std::cout << "sound_format[" << to_hex(sound_format) << "]" << std::endl;;
-  std::cout << "aac_packet_type[" << to_hex(aac_packet_type) << "]" << std::endl;
+  //std::cout << "fmt_aac_type[" << to_hex(fmt_aac_type) << "]->";
+  //std::cout << "fmt[" << to_hex(fmt) << "],";
+  //std::cout << "sound_format[" << to_hex(sound_format) << "]" << std::endl;;
+  //std::cout << "aac_packet_type[" << to_hex(aac_packet_type) << "]" << std::endl;
 
 
   if (sound_format != FLV_AAC && 
@@ -333,11 +333,11 @@ std::string encoding_base_64(buffer_t &src) {
   std::string out;
   Base64::Encode(in, &out);
   
-  std::cout << "src >" << std::endl;
-  std::cout << to_hex(src) << std::endl;
+  //std::cout << "src >" << std::endl;
+  //std::cout << to_hex(src) << std::endl;
 
-  std::cout << "base64 encoded >" << std::endl;
-  std::cout << out << std::endl;
+  //std::cout << "base64 encoded >" << std::endl;
+  //std::cout << out << std::endl;
 
   return out;
 }
@@ -368,39 +368,27 @@ bool get_first_sps_and_first_pps_from_avc_sequence_header(unsigned char*& buffer
 
   unsigned char fmt;
   read_1byte(buffer, fmt, buffer_len); 
-  std::cout << "fmt[" << to_hex(fmt) << "]->";
+  //std::cout << "fmt[" << to_hex(fmt) << "]->";
   
   unsigned char frame_type = (fmt & 0xf0) >> 4;
-  std::cout << "frame_type[" << to_hex(frame_type) << "],";
+  //std::cout << "frame_type[" << to_hex(frame_type) << "],";
 
   unsigned char codec_id = fmt & 0x0f;
-  std::cout << "codec_id[" << to_hex(codec_id) << "]" << std::endl;
+  //std::cout << "codec_id[" << to_hex(codec_id) << "]" << std::endl;
   
   unsigned char avc_type;
   read_1byte(buffer, avc_type, buffer_len); 
-  std::cout << "avc_type[" << to_hex(avc_type) << "]" << std::endl;
+  //std::cout << "avc_type[" << to_hex(avc_type) << "]" << std::endl;
 
   // check avc sequence header
   if ( avc_type != 0 )
     return false;
   
   // composition time offset
-  buffer_t composition_timestamp_offset(3);
-  read_nbyte(buffer, 3, composition_timestamp_offset.ptr_, buffer_len); 
-  composition_timestamp_offset.len_ = 3;
-  std::cout << "composition_timestamp_offset[" << to_hex(composition_timestamp_offset) << "]->";
-
-  uint32_t cts = 
-    (composition_timestamp_offset.ptr_[0] << 16) |
-    (composition_timestamp_offset.ptr_[1] << 8) |
-    composition_timestamp_offset.ptr_[2];
-
-  std::cout << "cts[" << to_hex(cts) << "]->";
-
-  cts = ((cts & 0x00FF0000) >> 16) |
-      ((cts & 0x000000FF) << 16) |
-      (cts & 0x0000FF00);
-  std::cout << "modified cts[" << to_hex(cts) << "]" << std::endl;
+  uint32_t cts;
+  read_3byte(buffer, cts, buffer_len);
+  
+  //std::cout << "cts[" << to_hex(cts) << "]" << std::endl;
 
   // version
   // profile
@@ -409,32 +397,32 @@ bool get_first_sps_and_first_pps_from_avc_sequence_header(unsigned char*& buffer
   buffer_t vpcl(4);
   read_nbyte(buffer, 4, vpcl.ptr_, buffer_len);
   vpcl.len_ += 4;
-  std::cout << "version, profile, compatibilty, level[" << to_hex(vpcl.ptr_, vpcl.len_) << "]" << std::endl;
+  //std::cout << "version, profile, compatibilty, level[" << to_hex(vpcl.ptr_, vpcl.len_) << "]" << std::endl;
 
   unsigned char nal_start_code_length;
   read_1byte(buffer, nal_start_code_length, buffer_len); 
-  std::cout << "nal_start_code_length[" << to_hex(nal_start_code_length) << "]->";
+  //std::cout << "nal_start_code_length[" << to_hex(nal_start_code_length) << "]->";
   nal_start_code_length = ( nal_start_code_length & 0x03 ) + 1; 
-  std::cout << "nal_bytes_start_code_length[" << to_hex(nal_start_code_length) << "]" << std::endl;
+  //std::cout << "nal_bytes_start_code_length[" << to_hex(nal_start_code_length) << "]" << std::endl;
 
   nal_startcode_len = nal_start_code_length;
 
   unsigned char number_of_sps;
   read_1byte(buffer, number_of_sps, buffer_len); 
-  std::cout << "number_of_sps[" << to_hex(number_of_sps) << "]->";
+  //std::cout << "number_of_sps[" << to_hex(number_of_sps) << "]->";
   number_of_sps &= 0x1f;
-  std::cout << "number_of_sps[" << to_hex(number_of_sps) << "]" << std::endl;
+  //std::cout << "number_of_sps[" << to_hex(number_of_sps) << "]" << std::endl;
 
   uint16_t sps_length;
   for (;number_of_sps > 0; --number_of_sps) {
     // sps length
     read_2byte(buffer, sps_length, buffer_len);
-    std::cout << "sps_length[" << to_hex(sps_length) << "]" << std::endl;
+    //std::cout << "sps_length[" << to_hex(sps_length) << "]" << std::endl;
 
     if (sps_length > sps.max_len_ ) return false;
     // sps 
     read_nbyte(buffer, sps_length, sps, buffer_len);
-    std::cout << "sps[" << to_hex(sps) << "]" << std::endl;
+    //std::cout << "sps[" << to_hex(sps) << "]" << std::endl;
 
     // get the first one only
     break;
@@ -442,19 +430,19 @@ bool get_first_sps_and_first_pps_from_avc_sequence_header(unsigned char*& buffer
 
   unsigned char number_of_pps;
   read_1byte(buffer, number_of_pps, buffer_len); 
-  std::cout << "number_of_pps[" << to_hex(number_of_pps) << "]" << std::endl;
+  //std::cout << "number_of_pps[" << to_hex(number_of_pps) << "]" << std::endl;
 
   uint16_t pps_length;
   for (; number_of_pps > 0; --number_of_pps) {
     // pps length
     read_2byte(buffer, pps_length, buffer_len);
-    std::cout << "pps_length[" << to_hex(pps_length) << "]" << std::endl;
+    //std::cout << "pps_length[" << to_hex(pps_length) << "]" << std::endl;
 
     if (pps_length > pps.max_len_ ) return false;
 
     // pps 
     read_nbyte(buffer, pps_length, pps, buffer_len);
-    std::cout << "pps[" << to_hex(pps) << "]" << std::endl;
+    //std::cout << "pps[" << to_hex(pps) << "]" << std::endl;
 
     // get the first one only
     break;
@@ -474,32 +462,50 @@ bool get_video(unsigned char*& buffer, buffer_t& video_es, video_frame_t& video_
   // 0 composition time offset 1st byte
   // 0 composition time offset 2nd byte
   // 0 composition time offset 3rd byte
+
+  // frameType :
+  // 1 : keyframe (for AVC, a seekable frame)
+  // 2 : interframe (for AVC, a non-seekable frame)
+  // 3 : disposable inter frame (H.263 only)
+  // 4 : generated key frame (reserved for server use only)
+  // 5: video info/command frame
+
+  // codecId  :
+  // 1 : JPEC
+  // 2 : Sorenson H.263
+  // 3 : Screen Video
+  // 4 : On2 VP6
+  // 5: On2 VP6 with alpha channel
+  // 6: Screen video version 2
+  // 7: AVC
+
+  // AVCPacketType  :  H264 AVC type 
+  // 0 : AVC sequence header
+  // 1 : AVC NANU
+  // 2 : AVC end of sequence
+
+
   unsigned char fmt;
   read_1byte(buffer, fmt, buffer_len); 
-  std::cout << "fmt[" << to_hex(fmt) << "]->";
+  //std::cout << "fmt[" << to_hex(fmt) << "]->";
   
   unsigned char frame_type = (fmt & 0xf0) >> 4;
-  std::cout << "frame_type[" << to_hex(frame_type) << "],";
+  //std::cout << "frame_type[" << to_hex(frame_type) << "],";
 
   unsigned char codec_id = fmt & 0x0f;
-  std::cout << "codec_id[" << to_hex(codec_id) << "]" << std::endl;
+  //std::cout << "codec_id[" << to_hex(codec_id) << "]" << std::endl;
   
   unsigned char avc_type;
   read_1byte(buffer, avc_type, buffer_len); 
-  std::cout << "avc_type[" << to_hex(avc_type) << "]" << std::endl;
+  //std::cout << "avc_type[" << to_hex(avc_type) << "]" << std::endl;
 
   // check avc nal unit
   if ( avc_type != 1 ) { return false; }
   
-  // composition time offset
+  // composition time offset : big endian
   uint32_t cts;
   read_3byte(buffer, cts, buffer_len);
-  std::cout << "cts[" << to_hex(cts) << "]->";
-
-  cts = ((cts & 0x00FF0000) >> 16) |
-      ((cts & 0x000000FF) << 16) |
-      (cts & 0x0000FF00);
-  std::cout << "modified cts[" << to_hex(cts) << "]" << std::endl;
+  //std::cout << "cts[" << to_hex(cts) << "]" << std::endl;
 
   // read nal start bytes and payload
   read_nbyte(buffer, buffer_len, video_es, buffer_len);
