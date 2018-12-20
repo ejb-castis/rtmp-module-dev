@@ -247,9 +247,6 @@ void end_publish(castis::streamer::media_publish_es_context_ptr& context, int&ec
   }  
 }
 
-// TODO: 
-// async ?
-// retry ?
 void publish_to_streamer(castis::streamer::media_publish_es_context_ptr context, 
   rtmp_protocol::MediaMessage_ptr request) {
   using namespace castis::streamer;
@@ -267,63 +264,12 @@ void publish_to_streamer(castis::streamer::media_publish_es_context_ptr context,
 
   RTMPLOGF(debug,"process es. context[%1%],stream_type[%2%],stream_name[%3%],client_id[%4%]",to_string(context), context->stream_type_, context->stream_name_, context->client_id_);
 
-  auto& state = context->publish_state_;
-  if (state == MediaPublishEsContext::begin)
-  {
-    std::string url = "http://" + context->publish_live_addr_port_ + context->publish_live_uri_;
-    std::string upload_id, publish_addr;
-    int ec=0;
-    begin_publish(url, context, publish_addr, upload_id, ec);
-    if (ec!=0) {
-      std::cout << "begin publish fail. ec[" << ec << "]" << std::endl;
-      return;
-    }
-    context->publish_id_ = upload_id;
-    context->publish_es_addr_port_ = publish_addr;
-    state = MediaPublishEsContext::init;
-
-    context->client_ = std::make_shared<castis::http::AsyncClient>();
-  }
-  {
-    if (state == MediaPublishEsContext::init && ready_to_send(context)) {
-        int ec=0;
-        init_publish(context->client_.get(), context, ec);
-        if(ec!=0) {
-          std::cout << "init publish fail. ec[" << ec << "]" << std::endl;
-          return;
-        }
-        state = MediaPublishEsContext::publishing;
-    }
-
-    while(state == MediaPublishEsContext::publishing && not context->media_es_.empty()) {
-
-      std::cout << "media_es_size[" << context->media_es_.size() << "]" << std::endl;
-      int ec=0;
-      publish_es(context->client_.get(), context, ec);
-      if(ec!=0) {
-        std::cout << "publish es fail. ec[" << ec << "]" << std::endl;
-        return;
-      }        
-      context->media_es_.pop_front();
-      
-    }
-  }
-  if (context->media_es_.empty() &&
-      (context->ready_to_end_of_stream_ || end_of_video_es(context))) {
-    int ec=0;
-    end_publish(context, ec);
-    if(ec!=0) {
-      std::cout << "end publish fail. ec[" << ec << "]" << std::endl;
-      return;
-    }
-    state=MediaPublishEsContext::end;
-  }
-
+  publish_to_streamer(context);
 }
 
 void publish_to_streamer(castis::streamer::media_publish_es_context_ptr context) {
   using namespace castis::streamer;
-  RTMPLOGF(debug,"process es. context[%1%],stream_type[%2%],stream_name[%3%],client_id[%4%]",to_string(context), context->stream_type_, context->stream_name_, context->client_id_);
+  RTMPLOGF(debug,"publish es. context[%1%],stream_type[%2%],stream_name[%3%],client_id[%4%]",to_string(context), context->stream_type_, context->stream_name_, context->client_id_);
 
   auto& state = context->publish_state_;
   if (state == MediaPublishEsContext::begin)

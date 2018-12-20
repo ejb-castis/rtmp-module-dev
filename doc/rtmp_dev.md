@@ -1,3 +1,23 @@
+#2018-12-20
+
+stearmer 와 연동 시에 파일이 10초? 이하인 것은 잘 안되는 것 같음
+또는 지연 시간이 10초 정도여서 그러는 것일 수도 있음
+
+
+#2018-12-19
+
+ 어제 test 에서 play 시 끊기는 문제는 steamer 에 저장된 파일을 local play 해도 생기는 현상이어서,
+ dts, pts 계산하는 코드를 review 해서,
+ 
+ audio, 
+ video 쪽에 dts, pts 계산하는 코드를 수정해서 해결했음
+
+ 끊기는 현상은 없어지고
+ 지연만 남은 상황임
+ 
+- rtmp-module 과 Streamer 의 연동 중에 
+ rtmp-module 버그로 인해서 es upload api 에 pts, dts 등의 값을 잘못 주면 streamer 가 죽는 문제가 발생하기도 했다.
+
 #2018-12-18
 
 ffmpeg 으로 publish 한 동영상을 flv 형태로 record 해서 

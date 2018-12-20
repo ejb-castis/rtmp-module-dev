@@ -10,10 +10,7 @@
 
 #include "flv_util.h"
 #include "parsingflv.h"
-
-#include "HTTPAsyncClient.h"
 #include "flv_message.h"
-#include "streamer/base64.h"
 
 using namespace castis::streamer;
 using namespace flv;
