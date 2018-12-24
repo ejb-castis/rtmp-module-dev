@@ -57,9 +57,9 @@ class RtmpMessageType {
 
 class RtmpMessage : public rtmp_network::Message {
 private:
-  RtmpHeader_ptr header_ptr_;
-  RtmpMessageType::type msg_type_;
-  unsigned int write_chunk_size_;
+  RtmpHeader_ptr header_ptr_{nullptr};
+  RtmpMessageType::type msg_type_{RtmpMessageType::UNKNOWN};
+  unsigned int write_chunk_size_{128};
   
 public:
   RtmpMessage();
@@ -81,16 +81,16 @@ public:
     return header_ptr_;
   }
 
-  RtmpHeaderFormat::format_type format_type_;
-  unsigned int chunk_stream_id_;
-  unsigned int timestamp_;
-  unsigned int msg_length_;
-  RtmpHeaderMsgTypeId::type msg_type_id_;
-  unsigned int msg_stream_id_;
-  unsigned int timestamp_delta_;
+  RtmpHeaderFormat::format_type format_type_{RtmpHeaderFormat::FULL};
+  unsigned int chunk_stream_id_{0};
+  unsigned int timestamp_{0};
+  unsigned int msg_length_{0};
+  RtmpHeaderMsgTypeId::type msg_type_id_{RtmpHeaderMsgTypeId::UNKNOWN};
+  unsigned int msg_stream_id_{0};
+  unsigned int timestamp_delta_{0};
 
-  long long abs_timestamp_;  // not used for network data
-  std::size_t id_;
+  long long abs_timestamp_{0};  // not used for network data
+  std::size_t id_{0};
 
   unsigned int chunk_stream_id() {
     return header_ptr_->chunk_stream_id_;

@@ -42,7 +42,9 @@ bool HandshakeManager::validate_C0_C1(std::istream& stream) {
     case 3:
       stream.read(reinterpret_cast<char*>(handshake_C1_), HANDSHAKE_MSG_LENGTH);
 
-      return validate_C1_ver3(handshake_C1_);
+      //return validate_C1_ver3(handshake_C1_);
+      return true;
+      
       // case 6: // RTMPE
       // case another 
     default:

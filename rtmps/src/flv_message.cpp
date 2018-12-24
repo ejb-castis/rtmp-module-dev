@@ -30,7 +30,7 @@ std::string to_string(MediaPublishEs* es) {
   oss << "dts[" << es->dts << "],";
   oss << "pts[" << es->pts << "],";
   oss << "size[" << es->size << "],";
-  oss << std::endl << "media_data[" << to_hex(*es->data) << "]";
+  oss << std::endl << "media_data[" << to_hex(*es->data,16) << "]";
   return oss.str();
 }
 
@@ -46,8 +46,7 @@ std::string to_string(media_publish_es_context_ptr& context) {
   oss << "video_frame_number[" << context->video_frame_number_ << "],";
   oss << "audio_frame_number[" << context->audio_frame_number_ << "],";
   if (context->media_es_.back().get()) {
-    oss << "last es_frame_data[" << to_string(context->media_es_.back().get())
-        << "]";
+    oss << "es_frame_data exist";
   } else {
     oss << "no es_frame_data";
   }
