@@ -8,7 +8,9 @@
 #include "HandshakeManager.hpp"
 #include "../common/EncryptUtil.hpp"
 #include "../common/NetworkUtil.hpp"
+#include "../common/StringUtil.hpp"
 #include "../../../src/rtmpmodulelogger.h"
+#include "flv_util.h"
 
 namespace rtmp_network {
 
@@ -31,48 +33,82 @@ unsigned char HandshakeManager::FP_key_in_sha256[] = { 0x47, 0x65, 0x6E, 0x75,
     0x93, 0xB8, 0xE6, 0x36, 0xCF, 0xEB, 0x31, 0xAE };  // 62
 
 HandshakeManager::HandshakeManager()
-    : digest_scheme_(0) {
+{
 }
 
 bool HandshakeManager::validate_C0_C1(std::istream& stream) {
-  unsigned char protocol_version = 0;
-  stream.read(reinterpret_cast<char*>(&protocol_version), sizeof(protocol_version));
+  stream.read(reinterpret_cast<char*>(&client_rtmp_version_), HANDSHAKE_MSG_VERSION_LEN);
 
-  switch (protocol_version) {
-    case 3:
+  switch (client_rtmp_version_) {
+
+    case 3: {
+      RTMPLOGF(debug, "handshake C0. rtmp_version[%1%],connection[%2%]",static_cast<unsigned>(client_rtmp_version_), connection_id_);
       stream.read(reinterpret_cast<char*>(handshake_C1_), HANDSHAKE_MSG_LENGTH);
-
-      //return validate_C1_ver3(handshake_C1_);
-      return true;
+      return validate_C1_ver3(handshake_C1_);
+    }
       
-      // case 6: // RTMPE
-      // case another 
-    default:
-      RTMPLOG(error) << "HandshakeManager[" << connection_id_ << "]:invalid handshake C1 protocl version ("
-                         << (unsigned int) protocol_version << ")";
+    // case 6: // RTMPE
+    // case another 
+    default: {
+      RTMPLOGF(debug, "invalid handshake C0 value. RTMP version SHOULD be 3. rtmp_version[%1%],connection[%2%]",static_cast<unsigned>(client_rtmp_version_), connection_id_);
       return false;
+    }
   }
   return false;
 }
+
+// RTMP spec(1.0)에서는 timestamp 값(4byte) 다음 값(4 byte )은 0 이어야 한다. 
+// 하지만 이 함수에서는 handshake version 값이 들어있다고 되어있다. 
+// 이 값이 0 인 경우는 RTMP spec에 나온 것과 같고 아무일도 하지 않으므로 그냥 두어도 될 것 같고,,
+// 이 값이 0 이 아닌 경우는  RTMP spec(1.0) 에 없는 내용이다. 
 bool HandshakeManager::validate_C1_ver3(const unsigned char* C1_buf) {
-  unsigned int flashPlayerVersion = 0;
-  memcpy(&flashPlayerVersion, C1_buf + 4, sizeof(unsigned int));
-  flashPlayerVersion = network_util::ntoh_4(flashPlayerVersion);
+
+  RTMPLOGF(debug, "C1_data[%1%]", string_util::to_hex(C1_buf,16));
+
+  // implicitly bigedian to littleendian
+  memcpy(&client_epoch_timestamp_, C1_buf, 4);
+
+  RTMPLOGF(debug, "time of C1_data[%1%]", string_util::to_hex(client_epoch_timestamp_));
+
+  //client_epoch_timestamp_ = network_util::ntoh_4(client_epoch_timestamp_);
+
+  RTMPLOGF(debug, "little endian time of C1_data[%1%]", string_util::to_hex(client_epoch_timestamp_));
+
+  //  test
+  uint32_t timestamp;
+  unsigned char* buf = (unsigned char*)C1_buf;
+  std::size_t len = 4;
+  flv_util::read_4byte(buf, timestamp, len);
+  RTMPLOGF(debug, "timestamp of C1_data[%1%]", string_util::to_hex(timestamp));
+  timestamp = network_util::ntoh_4(timestamp);
+  RTMPLOGF(debug, "little endian timestamp of C1_data[%1%]", string_util::to_hex(timestamp));
+
+  // implicitly bigedian to littleendian
+  memcpy(&client_handshake_version_, C1_buf + 4, 4);
+  // revert as it is : this field does not mean any integer value
+  client_handshake_version_ = network_util::hton_4(client_handshake_version_);
+
+  server_client_epoch_read_timestamp_ = (uint32_t)time(NULL);
 
   // check C1 validity
-  if (flashPlayerVersion == 0) {
-    RTMPLOG(error)
-        << "HandshakeManager[" << connection_id_ << "]:no need C1 validity (flash player version is 0)";
+  if (client_handshake_version_ == 0) {
+    RTMPLOGF(debug, "no need C1 validation. client_epoch_timestamp[%1%],handshake_version[%2%],connection[%3%]",client_epoch_timestamp_, string_util::to_hex(client_handshake_version_), connection_id_ );
+    RTMPLOGF(debug, "C1_data[%1%], C1_random_data[%2%],connection[%3%]", string_util::to_hex(&(handshake_C1_[0]),16), string_util::to_hex(&(handshake_C1_[8]),16), connection_id_ );
     return true;
   }
-
-  if (validate_client_scheme(C1_buf, 0))
-    digest_scheme_ = 0;
-  else if (validate_client_scheme(C1_buf, 1))
-    digest_scheme_ = 1;
   else {
-    RTMPLOG(error) << "HandshakeManager[" << connection_id_ << "]:handshake C1 is not valid.";
-    return false;
+    RTMPLOGF(debug, "validate C1. client_epoch_timestamp[%1%],handshake_version[%2%],connection[%3%]",client_epoch_timestamp_, string_util::to_hex(client_handshake_version_), connection_id_ );
+    RTMPLOGF(debug, "C1_data[%1%], C1_random_data[%2%],connection[%3%]", string_util::to_hex(&(handshake_C1_[0]),16), string_util::to_hex(&(handshake_C1_[8]),16), connection_id_ );
+  }
+
+  if (validate_client_scheme(C1_buf, DIGEST_MODE_0))
+    digest_scheme_ = DIGEST_MODE_0;
+  else if (validate_client_scheme(C1_buf, DIGEST_MODE_1))
+    digest_scheme_ = DIGEST_MODE_1;
+  else {
+    RTMPLOGF(debug, "C1 digest scheme is not valid. process no digest mode. client_epoch_timestamp[%1%],handshake_version[%2%],connection[%3%]",client_epoch_timestamp_, string_util::to_hex(client_handshake_version_), connection_id_ );
+    digest_scheme_ = NO_DIGEST_MODE; 
+    return true;
   }
 
   return true;
@@ -111,7 +147,7 @@ unsigned int HandshakeManager::get_digest_offset_0(const unsigned char* buf) {
   offset = offset % 728;
   offset = offset + 12;
   if (offset + 32 >= HANDSHAKE_MSG_LENGTH) {
-    RTMPLOG(error) << "HandshakeManager[" << connection_id_ << "]:invalid digest offset.";
+    RTMPLOGF(debug, "while validating C1, digest offset is invalid. handshakeversion[%1%],connection[%2%]",client_handshake_version_, connection_id_);
   }
   return offset;
 }
@@ -121,7 +157,7 @@ unsigned int HandshakeManager::get_digest_offset_1(const unsigned char* buf) {
   offset = offset % 728;
   offset = offset + 776;
   if (offset + 32 >= HANDSHAKE_MSG_LENGTH) {
-    RTMPLOG(error) << "HandshakeManager[" << connection_id_ << "]:invalid digest offset.";
+    RTMPLOGF(debug, "while validating C1, digest offset is invalid. handshakeversion[%1%],connection[%2%]",client_handshake_version_, connection_id_);
   }
   return offset;
 }
@@ -129,15 +165,14 @@ unsigned int HandshakeManager::get_digest_offset_1(const unsigned char* buf) {
 unsigned int HandshakeManager::get_digest_offset(const unsigned char* buf,
                                                  unsigned char scheme) {
   switch (scheme) {
-    case 0: {
+    case DIGEST_MODE_0: {
       return get_digest_offset_0(buf);
     }
-    case 1: {
+    case DIGEST_MODE_1: {
       return get_digest_offset_1(buf);
     }
     default: {
-      RTMPLOG(error) << "HandshakeManager[" << connection_id_ << "]:invalid scheme number: " << scheme
-                         << ". Defaulting to 0";
+      RTMPLOGF(debug, "while validating C1, invalid scheme[%1%]. process as if scheme is 0.  handshakeversion[%2%],connection[%3%]",scheme, client_handshake_version_, connection_id_);
       return get_digest_offset_0(buf);
     }
   }
@@ -145,9 +180,6 @@ unsigned int HandshakeManager::get_digest_offset(const unsigned char* buf,
 
 // S1 : Time1 Zero RandomData1
 // S2 : Time2 Time3 RandomData2
-// FIXME: 
-// ? MUST S2 field be contain the randomData of C1 in Spec
-// ? SHOLD function change name get_xxxx -> put_ or write_ 
 void HandshakeManager::get_S0_S1_S2(std::ostream& stream) {
   unsigned int timestamp = network_util::ntoh_4((unsigned int) time(NULL)); // Time1 field
   unsigned int server_version = 0; // Zero field
@@ -155,7 +187,7 @@ void HandshakeManager::get_S0_S1_S2(std::ostream& stream) {
   memcpy(handshake_S1_S2_, &timestamp, sizeof(unsigned int));
   memcpy(handshake_S1_S2_ + 4, &server_version, sizeof(unsigned int));
 
-  for (int i = 8; i < 3072; i++) {
+  for (int i = 8; i < HANDSHAKE_MSG_LENGTH * 2; i++) {
     handshake_S1_S2_[i] = rand() % 256;
   }
 
@@ -207,6 +239,54 @@ void HandshakeManager::get_S0_S1_S2(std::ostream& stream) {
   unsigned char rtmp_protocol_version = 3;
   stream.write(reinterpret_cast<const char*>(&rtmp_protocol_version),
                sizeof(rtmp_protocol_version));
+  stream.write((const char*) (handshake_S1_S2_), HANDSHAKE_MSG_LENGTH * 2);
+}
+
+// FIXME:
+// use stream directly
+// handshake_s1_s2_ 는 없애는 방법도 있을 것 같음.
+void HandshakeManager::write_S0_S1_S2(std::ostream& stream) {
+
+  server_epoch_timestamp_ = (uint32_t)time(NULL);
+
+  RTMPLOGF(debug, "server_epoch_timestamp_ of S1[%1%]", string_util::to_hex(server_epoch_timestamp_));
+
+  uint32_t timestamp = network_util::hton_4(server_epoch_timestamp_);
+
+  RTMPLOGF(debug, "bigendian server_epoch_timestamp_ of S1[%1%]", string_util::to_hex(timestamp));
+
+
+  uint32_t version = network_util::hton_4(server_handshake_version_);
+
+  //S1
+  memcpy(handshake_S1_S2_, &timestamp, 4);
+  memcpy(handshake_S1_S2_ + 4, &version, 4);
+  for (int i = 8; i < HANDSHAKE_MSG_LENGTH ; ++i) {
+    handshake_S1_S2_[i] = rand() % 256;
+  }
+
+  //S2
+  timestamp = network_util::hton_4(client_epoch_timestamp_);
+
+  RTMPLOGF(debug, "bigendian  timestamp of S2[%1%]", string_util::to_hex(timestamp));
+
+  uint32_t timestamp2  = network_util::hton_4(server_client_epoch_read_timestamp_);
+
+  RTMPLOGF(debug, "bigendian  timestamp2 of S2[%1%]", string_util::to_hex(timestamp2));
+  
+  memcpy(handshake_S1_S2_ + HANDSHAKE_MSG_LENGTH , &timestamp, 4);
+  memcpy(handshake_S1_S2_ + HANDSHAKE_MSG_LENGTH + 4, &timestamp2, 4);
+
+  for (int i = 8; i < HANDSHAKE_MSG_LENGTH ; ++i) {
+    handshake_S1_S2_[HANDSHAKE_MSG_LENGTH + i] = handshake_C1_[i];
+  }
+
+  RTMPLOGF(debug, "write S0. server_rtmp_version[%1%],connection[%2%]",static_cast<unsigned>(server_rtmp_version_), connection_id_ );
+  RTMPLOGF(debug, "write S1. server_epoch_timestamp[%1%],handshake_version[%2%],connection[%3%]",string_util::to_hex(&(handshake_S1_S2_[0]), 16), server_handshake_version_, connection_id_ );
+  RTMPLOGF(debug, "write S2. client_epoch_timestamp[%1%],server_client_epoch_read_timestamp[%2%],connection[%3%]",string_util::to_hex(&(handshake_S1_S2_[HANDSHAKE_MSG_LENGTH]), 16), string_util::to_hex(&(handshake_S1_S2_[HANDSHAKE_MSG_LENGTH+4]), 16), connection_id_ );
+  RTMPLOGF(debug, "write S2. random_echo[%1%],C1_random_data[%2%],connection[%3%]", string_util::to_hex(&(handshake_S1_S2_[HANDSHAKE_MSG_LENGTH+8]), 16), string_util::to_hex(&(handshake_C1_[8]),16), connection_id_ );
+
+  stream.write(reinterpret_cast<const char*>(&server_rtmp_version_), HANDSHAKE_MSG_VERSION_LEN );
   stream.write((const char*) (handshake_S1_S2_), HANDSHAKE_MSG_LENGTH * 2);
 }
 

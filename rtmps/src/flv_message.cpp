@@ -325,9 +325,9 @@ bool process_flv_es_dump_message(media_publish_es_context_ptr& context,
     } else if (is_aac_audio(bf)) {
       buffer_t* audio_es = new buffer_t(len);
       flv::audio_frame_t frame;
-      uint64_t dts = timestamp * 90;
-      uint64_t pts = dts;
       if (get_audio(bf, *audio_es, frame, len)) {
+        uint64_t dts = timestamp * 90;
+        uint64_t pts = dts;
         media_publish_es_ptr media_es = make_media_es(
             castis::streamer::audio, audio_es, context->frame_number_ + 1, 1,
             pts, dts, audio_es->len_, ec);
@@ -385,13 +385,11 @@ bool process_flv_es_dump_message(media_publish_es_context_ptr& context,
     } else if (is_avc_video(bf)) {
       buffer_t* video_es = new buffer_t(len);
       flv::video_frame_t frame;
-      uint64_t dts = timestamp * 90;
-      uint64_t pts = dts + frame.cts_ * 90;
-      uint8_t key = frame.keyframe_;
-
       if (get_video(bf, *video_es, frame, len)) {
+        uint64_t dts = timestamp * 90;
+        uint64_t pts = dts + frame.cts_ * 90;
+        uint8_t key = frame.keyframe_;
         parsingflv::replace_nalu_start_code_from_mp4_to_ts(4, *video_es);
-
         media_publish_es_ptr media_es = make_media_es(
             castis::streamer::video, video_es, context->frame_number_ + 1, key,
             pts, dts, video_es->len_, ec);

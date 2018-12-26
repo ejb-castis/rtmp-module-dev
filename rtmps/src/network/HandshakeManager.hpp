@@ -5,20 +5,33 @@
 
 namespace rtmp_network {
 
-#define HANDSHAKE_MSG_VERSION_LEN 1
-#define HANDSHAKE_MSG_LENGTH 1536
+const unsigned HANDSHAKE_MSG_VERSION_LEN =1;
+const unsigned HANDSHAKE_MSG_LENGTH =1536;
+enum { 
+  DIGEST_MODE_0 = 0,
+  DIGEST_MODE_1 = 1,
+  NO_DIGEST_MODE = 99
+};
 
 class HandshakeManager {
- private:
+ public:
   static unsigned char FMS_key_in_sha256[];
   static unsigned char FP_key_in_sha256[];
 
   unsigned int connection_id_;
+  uint8_t client_rtmp_version_{0};
+  uint32_t client_epoch_timestamp_{0};
+  uint32_t client_handshake_version_{0};
+
+  uint8_t server_rtmp_version_{3};
+  uint32_t server_epoch_timestamp_{0};
+  uint32_t server_client_epoch_read_timestamp_{0};
+  uint32_t server_handshake_version_{0};
 
   unsigned char handshake_C1_[HANDSHAKE_MSG_LENGTH];
   unsigned char handshake_S1_S2_[HANDSHAKE_MSG_LENGTH * 2];
 
-  unsigned char digest_scheme_;
+  unsigned char digest_scheme_{NO_DIGEST_MODE};
 
   bool validate_C1_ver3(const unsigned char* C1_buf);
   bool validate_client_scheme(const unsigned char* buf, unsigned char scheme);
@@ -34,6 +47,8 @@ class HandshakeManager {
   void set_connection_id(unsigned int id) {
     connection_id_ = id;
   }
+  void write_S0_S1_S2(std::ostream& S0_S1_S2_stream);
+
 };
 
 }  // namespace rtmp_network

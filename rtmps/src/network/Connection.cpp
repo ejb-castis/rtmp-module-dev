@@ -68,6 +68,9 @@ void Connection::start() {
                       shared_from_this(), boost::asio::placeholders::error)));
 }
 
+// TODO: 
+// handshake timeout 처리가 없음
+// rtmp time out 처리가 없음
 void Connection::handle_read_handshake_C0_C1(
     const boost::system::error_code& e) {
   RTMPLOGF(debug, "read handshake C0_C1. connection[%1%]", id_ );
@@ -81,7 +84,13 @@ void Connection::handle_read_handshake_C0_C1(
   std::istream request_stream(&request_streambuf_);
   if (handshake_manager_.validate_C0_C1(request_stream)) {
     std::ostream reply_stream(&reply_streambuf_);
-    handshake_manager_.get_S0_S1_S2(reply_stream);
+
+    if (handshake_manager_.client_handshake_version_ == 0 || 
+    handshake_manager_.digest_scheme_ == NO_DIGEST_MODE ) {
+      handshake_manager_.write_S0_S1_S2(reply_stream);
+    } else {
+      handshake_manager_.get_S0_S1_S2(reply_stream);
+    }
 
     request_streambuf_.consume(HANDSHAKE_MSG_LENGTH * 2 + 1);
 

@@ -52,69 +52,67 @@ nginx 등에서는 chunk stream 기반의 RTMP 프로토콜을 구현하고 있�
 접속 후, 서버와 클라이언트 간에 handshake protocol 교환이 일어나고, 
 성공하면 rtmp chunk stream 기반의 통신이 이루어집니다.
 
-##### Handshake Format : 
+##### Handshake seqence : 
 
-클라이언트는 c0 , c1을 보냅니다.
-클라이언트는 s0, s1 을 받으면, c2를 보냅니다.
-클라이언트가 s2를 받으면 handshake 과정을 끝내고 chunk stream 을 보냅니다.
+클라이언트는 C0, C1을 보냅니다.
+S0, S1 을 받으면 S1의 응답으로 C2를 보냅니다.
+C1의 응답인 S2를 받으면 handshake 과정을 끝내고 chunk stream 을 보냅니다.
 
-서버는 c0,c1을 받으면, s0,s1을 보냅니다.
-서버는 c1을 받으면, s2를 보냅니다.
-서버가 c2를 받으면 handshake 과정이 끝내고 데이터를 받습니다.
+서버는 C0을 받으면 (또는 C0, C1까지 받으면) S0, S1을 보냅니다.
+C1을 받으면, C1의 응답으로 S2를 보냅니다.
+S1의 응답인 C2를 받으면 handshake 과정을 끝내고 데이터를 받습니다.
 
-즉, 클라이언트는 c1 의 응답인 s2 를 받으면 handshake를 끝내고
-서버는 s1의 응답인 c2 를 받으면 handshake를 끝냅니다.
 
 ```puml
 title : client #1
-client -> server : c0
-client -> server : c1
-server -> client : s2
+client -> server : C0
+client -> server : C1
+server -> client : S2
 client -> server : chunk stream
 ```
 ```puml
 title : client #2
-client <- server : s0
-client <- server : s1
-client -> server : c2
+client <- server : S0
+client <- server : S1
+client -> server : C2
 ```
 
 ```puml
 title : server #1
-client -> server : c0
-client <- server : s0
-client <- server : s1
+client -> server : C0
+client <- server : S0
+client <- server : S1
 
-client -> server : c1
-client <- server : s2
+client -> server : C1
+client <- server : S2
 ```
 
 ```puml
 title : server #2
-client -> server : c2
+client -> server : C2
 client -> server : chunk stream
 ```
 
 ```puml
-client -> network : c0
-network -> server : c0
+client -> network : C0
+network -> server : C0
 activate server
-client -> network : c1
-server -> network : s0
-server -> network : s1
+client -> network : C1
+server -> network : S0
+server -> network : S1
 deactivate server
-network -> client : s0
-network -> client : s1
+network -> client : S0
+network -> client : S1
 activate client
-network -> server : c1
+network -> server : C1
 activate server
-client -> network : c2
+client -> network : C2
 deactivate client
-server -> network : s2
+server -> network : S2
 deactivate server
-network -> client : s2
+network -> client : S2
 activate client
-network -> server : c2
+network -> server : C2
 activate server
 client -> network : chunk
 deactivate client
@@ -122,27 +120,84 @@ network -> server : chunk
 deactivate server
 ```
 
-
-c0값으로 rtmp protocol version 을 보냅니다. ffmpeg 의 경우 3을 version값으로 보냅니다.
-
-c1에는 앞으로의 시간의 epoch 가 되는 시간값과 random값(1528byte)을 보냅니다. ffmpeg 의 경우 시간 epoch 값으로 0을 사용합니다.
-
-reandom값이 들어갑니다.
-c1의 응답인 s2 에는 c1의 random 값이 들어갑니다.
-
-s1의 응답인 c2 에는 s1의 reandom 값이 들어갑니다.
+##### Handshake Format, Value : 
 
 Handshake for client : C0(1 byte), C1(1536 byte), C2(1536 byte)
 Handshake for server : S0(1 byte), S1(1536 byte), S2(1536 byte)
 
-CO(1 byte) : 
-C1(1536 byte) : time(4 byte) zero(4 byte) randomByte(1528 byte)
-SO(1 byte) : 
-S1(1536 byte) : time(4 byte) zero(4 byte) randomByte(1528 byte)
-C2(1536byte) : time(4 byte) time(4 byte) randomByteOfS1(1528 byte)
-S2(1536byte) : time(4 byte) time(4 byte) randomByteOfC1(1528 byte)
+CO(1 byte) : rtmp version(1 byte)
+SO(1 byte) : rtmp version(1 byte)
 
-RandomByte can be : key(764byte) digest(764byte)
+C1(1536 byte) : time(4 byte) | zero(4 byte) | random bytes(1528 byte)
+S1(1536 byte) : time(4 byte) | zero(4 byte) | random bytes(1528 byte)
+
+C2(1536byte) : time(4 byte) | time2(4 byte) | random echo(1528 byte)
+S2(1536byte) : time(4 byte) | time2(4 byte) | random echo(1528 byte)
+
+randomBytes can be : key(764byte) digest(764byte)
+
+C0값(1byte)으로 rtmp protocol version 을 보냅니다. 규격에서는 client 와 server 모두 version 값으로 3 을 사용해야합니다. vesion 값 1,2 는 예전에 사용했었고, 4 이후 값은 나중에 사용할 값으로 정의하였습니다. ffmpeg 의 경우 version값으로 3을 사용합니다.
+
+C1, S1 의 time 값은 시간 epoch 값을 보냅니다. (client 가 C1을 보낸 시간, server가 S1 을 보낸 시간 값인 것 같습니다.)
+이 값은 0 일 수도 있고, 임의의 값일 수도 있고, chunkstream 의 timestamp 값일 수도 있습니다. 
+다음으로 0 값(4byte) 과 random값(1528byte)을 보냅니다. 
+
+C1의 timestamp 에 대한 내용은 원문 해석이 잘 안되어 인용합니다.
+``` 
+Time (4 bytes) : This field contains a timestamp, which SHOULD be 
+used as the epoch for all future chunks sent from this endpoint. 
+This may be 0, or some arbitary value. To synchronize multiple 
+chunkstreams, endpoint may wish to send the current value of 
+the other chunkstreams's timestamp.
+```
+
+nginx-rtmp-module 의 handshake 구현은 얼핏 보기엔 spec 과 좀 다릅니다.
+spec 대로 되어있는 지는 확실하지 않습니다.
+
+ffmpeg 의 경우 C1의 time 값으로 0을 사용하고 있습니다.
+그러나, zero 필드에는 version 정보(9, 0, 124, 2)를 그대로 보내고 있습니다. spec 에는 없는 내용으로 googling 해보았으나 아직 관련 내용을 못찾았습니다.
+ffmpeg 의 경우에 C1 의 random data 값에 암호화 한 값을 보내고 있는 것 같습니다.
+이 부분도 spec 에는 없는 내용입니다. ffmpeg 의 소스 코드의 comment 를 보았을 때,
+RTMPE 와 관련이 있어보입니다만,  RTMPE 에 대해서는 찾아보지 않았습니다.
+
+goCoder client 의 경우, C1의 time 값으로 0 이 아닌 값을 보내고 있고
+zero 필드에는 version 으로 보이는 값을 보내고 있습니다. 
+goCoder 의 경우에는 C1의 random data 값으로 암호화한 값을 보내고 있지 않기 때문에, 
+spec 대로 처리해주면 handshake 처리가 됩니다.
+
+
+C2: S1의 응답입니다.
+time 은 S1의 time 값,
+time2 는 S1을 읽은 time 값,
+random echo값은 s1의 random 값이 들어갑니다.
+
+S2: C1의 응답
+time 은 C1의 time 값,
+time2 는 C1을 읽은 time 값,
+random echo값은 C1의 random 값이 들어갑니다.
+
+handshake 의 timestamp 값을 어디에 사용해야하는 지에 대해서
+예시만 나올 뿐 꼭 필요한 부분을 밝히진 않고 있습니다. 
+
+스펙에 나온 예시 입니다.
+C2의 time2 - time 은 
+client가 S1을 읽은 시간 - server가 S1 을 보낸 시간이 되서 client 의 처리 시간을 알 수도 있습니다만, 사용될 것 같지는 않습니다.
+S2 의 time2 - time 은
+server가 C1을 읽은 시간 - client가 C1을 보낸 시간이 되어 server의 처리 시간을 알 수도 있습니다. 사용될 것 같지는 않습니다.
+
+
+그리고, timestamp 에 대해서 구현 시에 주의할 점이 spec 에 나와 있습니다.
+이 부분도 원문 해석이 잘 안되는 부분이 있어서 그래도 인용합니다.
+```
+Because timestamps are 32 bits long, they roll over every 49 datys, 17 
+hours, 2 minutes and 47.296 seconds. Because streams are allowed to 
+continuously, potentially for years on end, an RTMP application
+SHOULD use serial number arithmetic [RFC1982] when processing
+timestamps, and SHOLD be capable of handling wraparound. For 
+example, an application assumes that alll adjacent timestamps are 
+within 2^31-1 milliseconds of each other, so 10000 comes after 
+4,000,000,000 ,and 3,000,000,000 comes before 4,000,000,000
+```
 
 ##### RTMP Chunk Stream Format :
 

@@ -72,6 +72,17 @@ struct RecordingFlvContext {
 
 };
 
+//TODO:
+// times stamp roll over handling"
+// from RTMP spec(1.0) :
+// Because timestamps are 32 bits long, they roll over every 49 datys, 17 
+// hours, 2 minutes and 47.296 seconds. Because streams are allowed to 
+// continuously, potentially for years on end, an RTMP application
+// SHOULD use serial number arithmetic [RFC1982] when processing
+// timestamps, and SHOLD be capable of handling wraparound. For 
+// example, an application assumes that alll adjacent timestamps are 
+// within 2^31-1 milliseconds of each other, so 10000 comes after 
+// 4,000,000,000 ,and 3,000,000,000 comes before 4,000,000,000
 struct MediaPublishEsContext {
 public: 
   typedef enum { begin, init, publishing, end } publish_state_t;
@@ -86,6 +97,7 @@ public:
   VideoPublishEsInit video_init_es_;
   std::vector<unsigned char> video_eos_;
   
+  uint32_t peer_epoch_timestamp_{0}; // handshake c1 value
   uint8_t nal_startcode_len_{4};
   uint32_t video_timestamp_delta_{0};
   uint32_t audio_timestamp_delta_{0};

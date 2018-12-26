@@ -1,3 +1,22 @@
+#2018-12-26
+
+goCoder 연동 :
+
+1. handshake validataion 코드 제외
+  handshakeManager 에서 수정했으나, 
+  connetion.cpp 에서 수정할 수도 있을 것 같음
+2. handshake s2,s3 부분 검토
+
+
+3. nginx 코드 검토:
+  ngx_msec_t              epoch;
+  ngx_msec_t              peer_epoch;
+  ngx_msec_t              base_time;
+  uint32_t                current_time;
+
+  의 용도는?
+
+
 #2018-12-24
 
 RTMPmessage 에 초기화가 안된 변수들이 있어서
@@ -14,6 +33,8 @@ refactoring 과정에서 해주어야 한다.
 더 이상사용하지 않는 변수가 있는데, 
 이런 변수도 refactoring 과정에서 없애주어야 할 것 같다. 
 
+int flv_message.cpp 
+FIXME: nalu start code length is fixed to 4 
 
 
 #2018-12-20
