@@ -151,21 +151,6 @@ chunkstreams, endpoint may wish to send the current value of
 the other chunkstreams's timestamp.
 ```
 
-nginx-rtmp-module 의 handshake 구현은 얼핏 보기엔 spec 과 좀 다릅니다.
-spec 대로 되어있는 지는 확실하지 않습니다.
-
-ffmpeg 의 경우 C1의 time 값으로 0을 사용하고 있습니다.
-그러나, zero 필드에는 version 정보(9, 0, 124, 2)를 그대로 보내고 있습니다. spec 에는 없는 내용으로 googling 해보았으나 아직 관련 내용을 못찾았습니다.
-ffmpeg 의 경우에 C1 의 random data 값에 암호화 한 값을 보내고 있는 것 같습니다.
-이 부분도 spec 에는 없는 내용입니다. ffmpeg 의 소스 코드의 comment 를 보았을 때,
-RTMPE 와 관련이 있어보입니다만,  RTMPE 에 대해서는 찾아보지 않았습니다.
-
-goCoder client 의 경우, C1의 time 값으로 0 이 아닌 값을 보내고 있고
-zero 필드에는 version 으로 보이는 값을 보내고 있습니다. 
-goCoder 의 경우에는 C1의 random data 값으로 암호화한 값을 보내고 있지 않기 때문에, 
-spec 대로 처리해주면 handshake 처리가 됩니다.
-
-
 C2: S1의 응답입니다.
 time 은 S1의 time 값,
 time2 는 S1을 읽은 time 값,
@@ -182,13 +167,26 @@ handshake 의 timestamp 값을 어디에 사용해야하는 지에 대해서
 스펙에 나온 예시 입니다.
 C2의 time2 - time 은 
 client가 S1을 읽은 시간 - server가 S1 을 보낸 시간이 되서 client 의 처리 시간을 알 수도 있습니다만, 사용될 것 같지는 않습니다.
+
 S2 의 time2 - time 은
 server가 C1을 읽은 시간 - client가 C1을 보낸 시간이 되어 server의 처리 시간을 알 수도 있습니다. 사용될 것 같지는 않습니다.
 
+* S2의 예에서 time 은 client 가 C1를 보낼 때의 time 값이고, time2는 server가 C1을 읽은 시간인데 client 와 server 의 시간 기준이 갖지 않으면 의미가 없습니다. 
+둘 간의 시간을 맞추든지, S2의 time2 를 C1 의 time을 기준으로 해서 차이값을 
+계산해서 보낼 수도 있을 것 같습니다.
+
 
 그리고, timestamp 에 대해서 구현 시에 주의할 점이 spec 에 나와 있습니다.
-이 부분도 원문 해석이 잘 안되는 부분이 있어서 그래도 인용합니다.
+Timezone 에 대한 이야기는 없습니다. 상대적인 시간 값으로 생각하는 것 같습니다.
+이 부분도 원문 해석이 잘 안되는 부분이 있어서 인용합니다.
 ```
+Timestamps in RTMP are given as an integer number of milliseconds
+relative to an unspecified epoch. Typically, each stream will start
+with a timestamp of 0, but this is not required, as log as the two
+endopoints agree on the epoch. Note that this means that any
+synchronization across multiple streams (especially from separate
+hosts) requires some additional mechanism outside of RTMP.
+
 Because timestamps are 32 bits long, they roll over every 49 datys, 17 
 hours, 2 minutes and 47.296 seconds. Because streams are allowed to 
 continuously, potentially for years on end, an RTMP application
@@ -198,6 +196,29 @@ example, an application assumes that alll adjacent timestamps are
 within 2^31-1 milliseconds of each other, so 10000 comes after 
 4,000,000,000 ,and 3,000,000,000 comes before 4,000,000,000
 ```
+
+##### Handshake 구현
+
+ffmpeg 의 경우 C1의 time 값으로 0을 사용하고 있습니다.
+그러나, zero 필드에는 version 정보(9, 0, 124, 2)를 그대로 보내고 있습니다. spec 에는 없는 내용으로 googling 해보았으나 아직 관련 내용을 못찾았습니다.
+ffmpeg 의 경우에 C1 의 random data 값에 암호화 한 값을 보내고 있는 것 같습니다.
+이 부분도 spec 에는 없는 내용입니다. ffmpeg 의 소스 코드의 comment 를 보았을 때,
+RTMPE 와 관련이 있어보입니다만,  RTMPE 에 대해서는 찾아보지 않았습니다.
+그렇지만 S1, S2 를 spec 대로 구현하는 경우에도 연동이 되고, 
+nginx-rtmp-module 식으로 구현해도 연동이 됩니다.
+
+nginx-rtmp-module 의 handshake 구현은 얼핏 보기엔 handshake 구현이 spec 과 좀 다릅니다.
+client 가 보낸 C1 을 S1, S2 에 그대로 복사해서 보내는 것 같습니다.
+(spec 상으로는 이렇게 해도 별로 상관없어 보입니다.)
+
+ffmpeg 에도 nginx-rtmp-moduel 과 같은 handshake 방식도 구현이 되어있는 것 같습니다만,
+관련 spec 을 찾지는 못햇습니다.
+
+goCoder client 의 경우, C1의 time 값에 0이 아닌 값을 보내고 있고 zero 필드에도 
+0 이 아닌 값을 보내고 있습니다. 
+goCoder 의 경우에는 C1의 random data 값으로 암호화한 값을 보내고 있지 않습니다.
+(즉, ffmpeg 과 연동할 때 처럼 암호화를 검사하면 에러가 납니다.)
+그러나 S0, S1, S2 를 보내도 응답이 없어서 연동에 실패했습니다.
 
 ##### RTMP Chunk Stream Format :
 
@@ -364,6 +385,112 @@ RTMP 통신은 다음과 같은 sequence 로 진행됩니다.
 
 #### Publish metadata from recorded stream  
 ![Publish metadata](./rtmp_publish_metadata.png)
+
+#### 5. RTMP 구현
+
+5.1 nginx-rtmp-module :
+성능 튜닝??? 등은 없었습니다.
+
+1. ffmpeg 과 연동:
+요청 :
+ffmpeg -re -i /data/750k.mp4 -acodec aac -vcodec copy -f flv rtmp://localhost/myapp/test
+- myapp 이 ngix 설정에 들어 있어야 함
+- stream name 이 hls 요청에 사용됨
+
+hls url:
+http://localhost:8080/hls/test.m3u8
+
+2. OBS 과 연동:
+- 지연은 15~20초 정도입니다. (note book test 환경. 무선 인터넷)
+
+요청:
+rtmp://localhost/myapp
+stream key: pc
+
+hls url:
+http://localhost:8080/hls/pc.m3u8
+
+3. gocoder 와 연동: 
+연동 실패 합니다. 
+server가 S0, S1, S2 를 보내고, 
+gocoder 로 부터 C2 응답이 오지 않습니다.
+- rtmp 모듈과 같은 현상입니다.
+
+요청:
+rtmp://localhost/
+application: myapp
+stream name: gocoder
+
+hls url:
+http://localhost:8080/hls/gocoder.m3u8
+
+
+5.2 rtmp 연동 모듈: 
+지연은 15 ~ 20 초 정도입니다. ngix-rtmp-module 과 비슷한 수준인 것 같습니다.
+
+OBS 와 연동
+요청:
+rtmp://172.16.33.52/myapp
+stream key: pc
+
+hls url:
+http://172.16.33.52:8080/brokering/live/pc/master.m3u8
+
+brokering 은 streamer 설정에 필요
+현재 brokering 은 rtmp-module 에 
+hard-coding 되어 있는데, 
+ngix-rtmp-moduel 처럼
+rtmp app 으로 받은 값을 streamer 의 provider 값으로 사용할 수 있도록 
+수정이 필요할 것 같습니다.
+
+
+OBS 연동의 경우, message sequence 
+
+1. Handshake
+  C1 의 zero 필드에 0x00000000 을 보냅니다. 
+  handshake 는 ffmpeg 방식으로 해도되고, spec 에 있는 방식으로 해도 됩니다.
+2. SetChunkSize 
+  SetChunkSize Message 가 제일 먼저 옵니다. 
+  default size 는 128 인데, OBS 의 경우, 이 값을 4096 으로 setting 하고 시작합니다.
+3. Connect(app)
+  RTMP url 의 경우, 
+  rtmp://ip:poort/app/stream_name 식으로 사용합니다.
+  여러 필드 값이 있지만, app 필드 값이 중요한 값인 것 같습니다. 
+  url 의 app 값이 Connect parameter 로 넘어옵니다.
+  nginx-rtmp-module 과 연동할 때는 app 값이 서버 설정에 있어야 연동이 됩니다.
+
+4. server : WindowAcknowledgementSize
+5. server : SetPeerBandwidth
+6. server : StreamBegin
+7. server : ConnectResult
+8. ReleaseStream (stream name)
+  stream name 값으로 rtmp url 의 leaf 값이 전달됩니다. 
+9. server : SimpleResult
+10. FCPublish (stream name)
+11. server : SimpleResult
+12. CreateStream(stream name)
+13. server : SimpleResult(stream id)
+14. server : OnFCPublish
+15. Publish(stream name) 
+16. server : SimpleResult
+17. server : OnStatus(...,clientid)
+18. @setDataFrame, OnMetadata
+19. Audio
+20. video
+21. FCUnpublish(stream name)
+22. server : SimpleResult
+23. DeleteStream(stream id) 
+24. server : SimpleResult
+
+chunk stream id 는 client 가 정해서 보냅니다만, 
+message stream id 의 경우는 
+CreateStream 요청에 대한 답으로 server 가 steram id 값을 보내면, 
+client 가 그 이후의 message 의 stream id 를 server 가 보낸 값으로 보냅니다.
+
+
+
+
+
 
 
 
