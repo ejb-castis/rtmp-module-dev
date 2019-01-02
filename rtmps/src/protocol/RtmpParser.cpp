@@ -65,7 +65,6 @@ boost::tribool RtmpParser::parse_private(std::istream& stream, size_t buf_size,
           total_readed_size += readed_size;
 
           set_parsed_header(header_parser_.get_parsed_msg());
-          set_abs_timestamp(parsed_header_);
 
           RTMPLOG(debug) << "connection_id:" << connection_id_
                               << ",parsed header:"
@@ -123,7 +122,7 @@ boost::tribool RtmpParser::parse_private(std::istream& stream, size_t buf_size,
           buf_size -= readed_size;
           total_readed_size += readed_size;
 
-          //RTMPLOG(debug) << "result : WAITING_NEXT_CHUNK -> parsing state HEADER_PARSING after parsing payload"<< ",readed size: "<< readed_size << ",buf_size: " << buf_size << ",total readed size: " << total_readed_size;
+          //RTMPLOG(debug) << "result : WAITING_NEXT_CHUNK -> parsing state HEADER_PARSING after parsing payload"<< ",read size: "<< readed_size << ",buf_size: " << buf_size << ",total read size: " << total_readed_size;
 
           parsing_state_ = HEADER_PARSING;
           break;
@@ -167,21 +166,6 @@ void RtmpParser::reset() {
   parsed_header_.reset();
 }
 
-void RtmpParser::set_abs_timestamp(RtmpHeader_ptr header) {
-  // TODO: set_abs_timestamp implement
-//  stream_info_map::const_iterator stream_info_iter;
-//  stream_info_ptr cur_stream_info;
-//  stream_info_iter = stream_infos_.find(header->chunk_stream_id_);
-//
-//  if (stream_info_iter == stream_infos_.end()) {
-//    if (header->is_first_msg_chunk() || header->is_first_stream_chunk()) {
-//      cur_stream_info = stream_info_ptr(new stream_info);
-//      cur_stream_info->last_msg_header = header;
-//      if (header->is_first_stream_chunk())
-//        cur_stream_info->first_stream_header = header;
-//    }
-//  }
-}
 void RtmpParser::set_parsed_msg(RtmpMessage_ptr msg) {
   parsed_msg_.reset();
   parsed_msg_ = msg;

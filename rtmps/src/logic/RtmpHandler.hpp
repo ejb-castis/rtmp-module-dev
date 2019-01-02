@@ -12,21 +12,6 @@
 #include <list>
 
 namespace rtmp_logic {
-// TODO: implement StreamManager logic
-//class MessageStream {
-// public:
-//  std::string simple_name_;
-//  std::string full_name_;
-//  unsigned int id_;
-//  bool empty() {
-//    return simple_name_.empty() && full_name_.empty();
-//  }
-//  bool is_same_name(const std::string& stream_name) {
-//    return full_name_.compare(stream_name) == 0
-//        || simple_name_.compare(stream_name) == 0;
-//  }
-//};
-//typedef boost::shared_ptr<MessageStream> MessageStream_ptr;
 
 class RtmpHandler : public rtmp_network::RequestHandler {
  public:
@@ -36,10 +21,6 @@ class RtmpHandler : public rtmp_network::RequestHandler {
 
  private:
   unsigned int get_id();
-  // TODO: implement StreamManager logic
-//  MessageStream_ptr get_new_stream();
-//  void remove_stream(const std::string & stream_name);
-
   void handle_connect_message(rtmp_protocol::ConnectMessage_ptr request);
   void handle_release_stream(rtmp_protocol::ReleaseStream_ptr request);
   void handle_fc_publish(rtmp_protocol::FCPublish_ptr request);
@@ -54,13 +35,6 @@ class RtmpHandler : public rtmp_network::RequestHandler {
 
   unsigned int chunk_size_;
   unsigned int id_;
-  // TODO: implement StreamManager logic
-  // bit flag => check for used stream.
-  // this program allows only 256 stream.
-  // Crtmpserver allows only 256 stream.
-  // RTMP spec allows 4294967295(4-byte) streams.
-//  std::list<MessageStream_ptr> msg_streams_;
-//  bool used_msg_stream_flag_[256];
 };
 typedef boost::shared_ptr<RtmpHandler> RtmpHandler_ptr;
 

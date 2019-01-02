@@ -5,6 +5,7 @@ project (rtmp_unittest)
 
 set(TEST_SRCS
   parsinghflv_test.cpp
+  general_test.cpp
 )
 
 ################################################################################

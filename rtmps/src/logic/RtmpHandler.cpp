@@ -165,8 +165,8 @@ void RtmpHandler::handle_connect_message(ConnectMessage_ptr request) {
 
 void RtmpHandler::handle_release_stream(ReleaseStream_ptr request) {
 
-  auto manager = StreamManager::get_instance();
-  manager.release_stream(request->stream_name_);
+  // auto manager = StreamManager::get_instance();
+  // manager.release_stream(request->stream_name_);
   
   RtmpHeaderFormat::format_type header_type = RtmpHeaderFormat::SAME_STREAM;
   unsigned int chunk_stream_id = request->get_header()->chunk_stream_id_;
@@ -329,8 +329,8 @@ void RtmpHandler::handle_publish(Publish_ptr request) {
 }
 
 void RtmpHandler::handle_play(Play_ptr request) {
-  StreamManager* manager = StreamManager::getInstancePtr();
-  manager->set_out(get_message_sender());
+  // StreamManager* manager = StreamManager::getInstancePtr();
+  // manager->set_out(get_message_sender());
   change_continuous_send_state(true);
 
   // TODO: process when media data flow begins.
@@ -429,8 +429,8 @@ void RtmpHandler::handle_media_message(MediaMessage_ptr request) {
 }
 
 void RtmpHandler::handle_set_chunk_size(SetChunkSize_ptr request) {
-  StreamManager* manager = StreamManager::getInstancePtr();
-  manager->set_chunk_size(request->chunk_size_);
+  // StreamManager* manager = StreamManager::getInstancePtr();
+  // manager->set_chunk_size(request->chunk_size_);
 }
 
 void RtmpHandler::handle_on_metadata() {

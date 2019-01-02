@@ -28,8 +28,7 @@ class RtmpParser : public rtmp_network::RequestParser {
 
   RtmpHeader_ptr parsed_header_;
   RtmpMessage_ptr parsed_msg_;
-
-  void set_abs_timestamp(RtmpHeader_ptr header);
+  
   void set_parsed_msg(RtmpMessage_ptr msg);
   void set_parsed_header(RtmpHeader_ptr header);
   boost::tribool parse_private(std::istream& stream, size_t buf_size,
