@@ -89,7 +89,7 @@ public:
   unsigned int msg_stream_id_{0};
   unsigned int timestamp_delta_{0};
 
-  long long abs_timestamp_{0};  // not used for network data
+  uint64_t abs_timestamp_{0}; // 64 bit value for 32 bit timestamp with rollover
   std::size_t id_{0};
 
   unsigned int chunk_stream_id() {

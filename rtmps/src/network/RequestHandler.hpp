@@ -30,6 +30,7 @@ class RequestHandler {
   virtual void handle_request(Message_ptr request) = 0;
   virtual void notify_disconnect() = 0;
  
+  virtual void set_context(castis::streamer::media_publish_es_context_ptr) = 0;
   castis::streamer::media_publish_es_context_ptr context_;  
 
 };

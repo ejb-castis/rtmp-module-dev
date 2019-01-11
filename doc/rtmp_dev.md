@@ -1,4 +1,72 @@
+
+#2019-01-11
+
+32 bit timestamp -> 64 bit 처리
+rtmp timestamp 는 32 bit 값이어서,
+49일 17시간 2분 47.296초 마다 timestamp 값이 0 으로 rollover 된다.
+
+내부적으로 64bit timestamp 값을 사용하고 
+32 bit timestamp 값이 roll over 되는 것을 고려해서 처리 하는 코드를 추가
+
+
+	수정함:        doc/rtmp_dev.md
+	수정함:        rtmps/src/flv_message.cpp
+	수정함:        rtmps/src/flv_message.h
+	수정함:        rtmps/src/logic/RtmpHandler.cpp
+	수정함:        rtmps/src/logic/RtmpHandler.hpp
+	수정함:        rtmps/src/network/Connection.cpp
+	수정함:        rtmps/src/network/Connection.hpp
+	수정함:        rtmps/src/network/RequestHandler.hpp
+	수정함:        rtmps/src/network/RequestParser.hpp
+	수정함:        rtmps/src/protocol/RtmpHeader.hpp
+	수정함:        rtmps/src/protocol/RtmpHeaderParser.cpp
+	수정함:        rtmps/src/protocol/RtmpMessage.cpp
+	수정함:        rtmps/src/protocol/RtmpMessage.hpp
+	수정함:        rtmps/src/protocol/RtmpParser.cpp
+	수정함:        rtmps/src/protocol/RtmpParser.hpp
+	수정함:        rtmps/src/protocol/RtmpPayloadParser.cpp
+	수정함:        rtmps/src/protocol/RtmpPayloadParser.hpp
+	수정함:        rtmps/src/publish_to_streamer.cpp
+	새 파일:       rtmps/src/sna.h
+	수정함:        src/version.h
+
+#2019-01-10
+
+rtmp timestamp 는 32 bit 값이어서,
+49일 17시간 2분 47.296초 마다 timestamp 값이 0 으로 rollover 된다.
+
+내부적으로 64bit timestamp 값을 사용하고 
+32 bit timestamp 값이 roll over 되는 것을 고려해서 
+처리 하는 코드를 추가 하는 중
+
+TODO:
+1.
+지난 번에 못한
+nginx 코드 검토도 필요할 것 같디.
+  ngx_msec_t              epoch;
+  ngx_msec_t              peer_epoch;
+  ngx_msec_t              base_time;
+  uint32_t                current_time;
+
+nginx 는 roll over 를 어떻게 하는 지 알아보아야할 것 같다.
+
+2.
+현재 연동에서는 문제 없어보이지만,
+message stream 과 chunksream 간의 관계를 다시 고려해서,
+코드를 review 해보아야할 것 같다. 
+현재는 하나의 chunk stream 에 
+하나의 message stream 이 들어있다고 가정한 부분이 있다.
+
+3.
+pseudo code 도 다시 review 하고 
+refactoring 해야하지 않을까 ? 
+지금 다시 보니 code 읽기 힘듬
+
+
 #2018-12-26
+
+wowza goCoder 는 wowza server 와만 연동되는 것으로 예상되서, 연동 하지 않기로 했음.
+
 
 goCoder 연동 :
 

@@ -18,6 +18,7 @@ class RtmpHandler : public rtmp_network::RequestHandler {
   RtmpHandler(rtmp_network::MessageSender_wptr sender, unsigned int id);
   void handle_request(rtmp_network::Message_ptr request);
   void notify_disconnect();
+  void set_context(castis::streamer::media_publish_es_context_ptr);
 
  private:
   unsigned int get_id();

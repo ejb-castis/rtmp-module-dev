@@ -6,6 +6,7 @@
 #include "Message.hpp"
 #include "MessageSender.hpp"
 #include <boost/shared_ptr.hpp>
+#include "flv_message.h"
 
 namespace rtmp_network {
 class RequestParser {
@@ -30,6 +31,8 @@ class RequestParser {
   void change_continuous_send_state(bool state) {
     sender_->change_continuous_send_state(state);
   }
+  virtual void set_context(castis::streamer::media_publish_es_context_ptr) = 0;
+  castis::streamer::media_publish_es_context_ptr context_;  
 
   // return value :
   // 1. true : message parsing complete

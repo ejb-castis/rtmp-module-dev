@@ -22,6 +22,7 @@ std::string RtmpMessage::to_string() {
     oss << "type[" << header_ptr_->msg_type_id_ <<"],";
     oss << "length[" << header_ptr_->msg_length_ <<"],";
     oss << "timestamp[" << header_ptr_->timestamp_ <<"],";
+    oss << "abs_timestamp[" << header_ptr_->abs_timestamp_ <<"],";
     oss << "header[" << get_header()->to_string() <<"]";
     return oss.str();
   }

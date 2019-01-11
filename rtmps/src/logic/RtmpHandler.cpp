@@ -437,6 +437,9 @@ void RtmpHandler::handle_on_metadata() {
   RTMPLOG(debug) << "handle OnMetadata";
 }
 
+void RtmpHandler::set_context(castis::streamer::media_publish_es_context_ptr ctx) {
+  context_ = ctx;
+}
 
 
 }  // namespace rtmp_logic

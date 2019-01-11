@@ -97,7 +97,15 @@ public:
   VideoPublishEsInit video_init_es_;
   std::vector<unsigned char> video_eos_;
   
-  uint32_t peer_epoch_timestamp_{0}; // handshake c1 value
+  uint64_t peer_epoch_timestamp_{0}; // handshake c1 value
+  uint32_t last_message_timestamp_{0}; // last message timestamp 
+  uint32_t rollover_count_{0}; // timestamp rollover count
+
+  // handshake c1 값으로 epoch time 값이 전달되었을 때, server 쪽 timestamp 값 
+  // 대략 현재 server timestamp 값에서 이 값을 빼면
+  // client 의 현재 timestamp 값을 유추할 수 있다.
+  uint64_t base_timestamp_{0}; 
+
   uint8_t nal_startcode_len_{4};
   uint32_t video_timestamp_delta_{0};
   uint32_t audio_timestamp_delta_{0};
@@ -152,7 +160,7 @@ bool read_flv_es_dump_file(castis::streamer::media_publish_es_context_ptr& conte
 bool process_flv_es_message(
   castis::streamer::media_publish_es_context_ptr& context, 
   uint8_t message_type,
-  uint32_t timestamp,
+  uint64_t timestamp,
   uint32_t message_length,  
   unsigned char* const buffer, 
   std::size_t const buffer_size,

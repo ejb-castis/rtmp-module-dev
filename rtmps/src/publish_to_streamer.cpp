@@ -258,7 +258,7 @@ void publish_to_streamer(castis::streamer::media_publish_es_context_ptr context,
   bool ret = flv_message::process_flv_es_message(
     context, 
     static_cast<uint8_t>(request->get_header()->msg_type_id_),
-    static_cast<uint32_t>(request->get_header()->timestamp_),
+    static_cast<uint64_t>(request->get_header()->abs_timestamp_),
     static_cast<uint32_t>(request->get_header()->msg_length_),  
     data, data_len, ec);
 

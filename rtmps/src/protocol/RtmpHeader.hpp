@@ -71,7 +71,7 @@ class RtmpHeader {
   unsigned int msg_stream_id_;
   unsigned int timestamp_delta_;
 
-  long long abs_timestamp_;  // not used for network data
+  uint64_t abs_timestamp_;  // 64 bit value for 32 bit timestamp with rollover
   std::size_t message_id_{0};
 
   RtmpHeader() {

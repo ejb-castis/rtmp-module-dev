@@ -110,7 +110,7 @@ media_publish_es_ptr make_media_es(media_es_type_t type,
 namespace flv_message {
 
 bool process_flv_es_message(media_publish_es_context_ptr& context,
-                            uint8_t message_type, uint32_t timestamp,
+                            uint8_t message_type, uint64_t timestamp,
                             uint32_t message_length,
                             unsigned char* const buffer,
                             std::size_t const buffer_size, int& ec) {
@@ -287,6 +287,8 @@ bool read_flv_es_dump_file(media_publish_es_context_ptr& context,
   return true;
 }
 
+//FIXME: 
+// flv 의 32 bit timestamp 값도 64 bit 로 변환이 필요함
 bool process_flv_es_dump_message(media_publish_es_context_ptr& context,
                                  unsigned char* const buffer,
                                  std::size_t const buffer_size, int& ec) {

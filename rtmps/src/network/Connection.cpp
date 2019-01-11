@@ -7,10 +7,6 @@
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 //
-
-//#define PRINT_CLOCK
-//#define PRINT_DUMP
-
 #include "Connection.hpp"
 
 #include <vector>
@@ -41,7 +37,8 @@ Connection::Connection(boost::asio::io_service& io_service,
   handler_ = handler_factory->get_request_handler(this, id);
   parser_ = parser_factory->get_request_parser(this, id);
   handshake_manager_.set_connection_id(id);
-  handler_->context_ = context_;
+  handler_->set_context(context_);
+  parser_->set_context(context_);
 }
 
 Connection::~Connection() {
@@ -84,6 +81,8 @@ void Connection::handle_read_handshake_C0_C1(
   std::istream request_stream(&request_streambuf_);
   if (handshake_manager_.validate_C0_C1(request_stream)) {
     std::ostream reply_stream(&reply_streambuf_);
+
+    set_base_timestamp(handshake_manager_.client_epoch_timestamp_);
 
     if (handshake_manager_.client_handshake_version_ == 0 || 
     handshake_manager_.digest_scheme_ == NO_DIGEST_MODE ) {
@@ -277,6 +276,12 @@ void Connection::change_continuous_send_state(bool state) {
   }
 
   is_continuous_send_state_ = state;
+}
+
+void Connection::set_base_timestamp(uint32_t timestamp) {
+  context_->peer_epoch_timestamp_ = timestamp;
+  context_->last_message_timestamp_ = timestamp;
+  context_->base_timestamp_ = std::time(nullptr);
 }
 
 }  // namespace rtmp_network

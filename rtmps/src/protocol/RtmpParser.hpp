@@ -48,6 +48,9 @@ class RtmpParser : public rtmp_network::RequestParser {
     payload_parser_.set_recv_chunk_size(size);
   }
   void reset();
+
+  void set_context(castis::streamer::media_publish_es_context_ptr);
+
 };
 typedef boost::shared_ptr<RtmpParser> RtmpParser_ptr;
 

@@ -44,9 +44,6 @@ boost::tribool RtmpParser::parse(std::istream& stream, size_t buf_size,
   return result;
 }
 
-// FIXME: 
-// when logging parsed payload here, its header info seems to be incomplete
-// seems different from when logged in parse_payload function
 boost::tribool RtmpParser::parse_private(std::istream& stream, size_t buf_size,
                                          size_t& total_readed_size) {
   total_readed_size = 0;
@@ -174,6 +171,11 @@ void RtmpParser::set_parsed_msg(RtmpMessage_ptr msg) {
 void RtmpParser::set_parsed_header(RtmpHeader_ptr header) {
   parsed_header_.reset();
   parsed_header_ = header;
+}
+
+void RtmpParser::set_context(castis::streamer::media_publish_es_context_ptr ctx) {
+  context_ = ctx;
+  payload_parser_.context_ = context_;
 }
 
 }  // namespace rtmp_protocol

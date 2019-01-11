@@ -44,7 +44,6 @@ class Connection : public boost::enable_shared_from_this<Connection>,
   void handle_read_handshake_C0_C1(const boost::system::error_code& e);
   void handle_S0_S1_S2_write(const boost::system::error_code& e);
   void handle_read_handshake_C2(const boost::system::error_code& e);
-
   void handle_read(const boost::system::error_code& e,
                    std::size_t bytes_transferred);
   void disconnect();
@@ -56,6 +55,7 @@ class Connection : public boost::enable_shared_from_this<Connection>,
   void change_continuous_send_state(bool state);
   void handle_send_timer(const boost::system::error_code& e);
 
+  void set_base_timestamp(uint32_t timestamp);
   /// Strand to ensure the connection's handlers are not called concurrently.
   boost::asio::io_service::strand strand_;
 
@@ -77,7 +77,7 @@ class Connection : public boost::enable_shared_from_this<Connection>,
   RequestHandler_ptr handler_;
   RequestParser_ptr parser_;
 
-  castis::streamer::media_publish_es_context_ptr context_;  
+  castis::streamer::media_publish_es_context_ptr context_;
 
   unsigned int id_;
 };

@@ -1,14 +1,12 @@
 #include "RtmpHeaderParser.hpp"
-#include "../common/NetworkUtil.hpp"
 #include "../../../src/rtmpmodulelogger.h"
+#include "../common/NetworkUtil.hpp"
 
 namespace rtmp_protocol {
-RtmpHeaderParser::RtmpHeaderParser() {
-  reset();
-}
+RtmpHeaderParser::RtmpHeaderParser() { reset(); }
 
-RtmpHeaderParser::parsing_state RtmpHeaderParser::get_chunk_header_parsing_state(
-    int header_format) {
+RtmpHeaderParser::parsing_state
+RtmpHeaderParser::get_chunk_header_parsing_state(int header_format) {
   switch (header_format) {
     case 0:
       return CHUNK_MSG_HEADER_TYPE0;
@@ -74,29 +72,35 @@ void RtmpHeaderParser::reset() {
   parsing_state_ = BASIC_HEADER_1BYTE;
 }
 
-boost::tribool RtmpHeaderParser::parse_header(std::istream& stream, size_t buf_size,
-                                       size_t& total_readed_size) {
+boost::tribool RtmpHeaderParser::parse_header(std::istream& stream,
+                                              size_t buf_size,
+                                              size_t& total_readed_size) {
   total_readed_size = 0;
   while (true) {
-
     if (parsing_state_ == COMPLETE) {
       parsing_state_ = BASIC_HEADER_1BYTE;
       return true;
     }
 
     size_t readed_size = 0;
-    boost::tribool result = parse_in_current_state(stream, buf_size,
-                                                   readed_size, parsing_state_);
+    boost::tribool result =
+        parse_in_current_state(stream, buf_size, readed_size, parsing_state_);
     if (result) {
       buf_size -= readed_size;
       total_readed_size += readed_size;
     } else {
-      RTMPLOGF(debug,"parse_in_current_state[false],parsing_state[%1%],buf_size[%2%],read_size[%3%]",parsing_state_ ,buf_size, readed_size);
+      RTMPLOGF(debug,
+               "parse_in_current_state[false],parsing_state[%1%],buf_size[%2%],"
+               "read_size[%3%]",
+               parsing_state_, buf_size, readed_size);
       return result;
     }
   }
 
-  RTMPLOGF(debug,"parse_in_current_state[false],parsing_state[%1%],buf_size[%2%],total_read_size[%3%]",parsing_state_ ,buf_size, total_readed_size);
+  RTMPLOGF(debug,
+           "parse_in_current_state[false],parsing_state[%1%],buf_size[%2%],"
+           "total_read_size[%3%]",
+           parsing_state_, buf_size, total_readed_size);
   return false;
 }
 
@@ -112,8 +116,7 @@ boost::tribool RtmpHeaderParser::parse_basic_header_1byte(std::istream& stream,
     unsigned short cs_id = header1 & 0x3F;
 
     parsed_msg_->format_type_ = RtmpHeaderFormat::get_type(format_type);
-    if(parsed_msg_->format_type_ == RtmpHeaderFormat::UNKNOWN)
-      return false;
+    if (parsed_msg_->format_type_ == RtmpHeaderFormat::UNKNOWN) return false;
 
     parsed_msg_->chunk_stream_id_ = cs_id;
 
@@ -191,10 +194,9 @@ boost::tribool RtmpHeaderParser::parse_chunk_header_type0(std::istream& stream,
     timestamp = network_util::ntoh_3(timestamp);
     msg_length = network_util::ntoh_3(msg_length);
     // msg_stream_id is little_endian
-    //msg_stream_id = network_util::ntoh_3(msg_stream_id);
+    // msg_stream_id = network_util::ntoh_3(msg_stream_id);
 
-    if (timestamp > 0x00FFFFFF)
-      timestamp = 0x00FFFFFF;
+    if (timestamp > 0x00FFFFFF) timestamp = 0x00FFFFFF;
 
     parsed_msg_->timestamp_ = timestamp;
     parsed_msg_->msg_length_ = msg_length;
@@ -204,8 +206,7 @@ boost::tribool RtmpHeaderParser::parse_chunk_header_type0(std::istream& stream,
     parsing_state_ =
         (parsed_msg_->timestamp_ == 0x00FFFFFF) ? EXTENDED_TIMESTAMP : COMPLETE;
 
-    if(parsed_msg_->msg_type_id_ == RtmpHeaderMsgTypeId::UNKNOWN)
-      return false;
+    if (parsed_msg_->msg_type_id_ == RtmpHeaderMsgTypeId::UNKNOWN) return false;
 
     readed_size = 11;
     return true;
@@ -230,13 +231,13 @@ boost::tribool RtmpHeaderParser::parse_chunk_header_type1(std::istream& stream,
 
     parsed_msg_->timestamp_delta_ = timestamp_delta;
     parsed_msg_->msg_length_ = msg_length;
-    parsed_msg_->msg_type_id_ =  RtmpHeaderMsgTypeId::get_id(msg_type_id);
+    parsed_msg_->msg_type_id_ = RtmpHeaderMsgTypeId::get_id(msg_type_id);
 
-    parsing_state_ =
-            (parsed_msg_->timestamp_delta_ == 0x00FFFFFF) ? EXTENDED_TIMESTAMP : COMPLETE;
+    parsing_state_ = (parsed_msg_->timestamp_delta_ == 0x00FFFFFF)
+                         ? EXTENDED_TIMESTAMP
+                         : COMPLETE;
 
-    if(parsed_msg_->msg_type_id_ == RtmpHeaderMsgTypeId::UNKNOWN)
-          return false;
+    if (parsed_msg_->msg_type_id_ == RtmpHeaderMsgTypeId::UNKNOWN) return false;
 
     readed_size = 7;
     return true;
@@ -255,8 +256,9 @@ boost::tribool RtmpHeaderParser::parse_chunk_header_type2(std::istream& stream,
 
     parsed_msg_->timestamp_delta_ = timestamp_delta;
 
-    parsing_state_ =
-            (parsed_msg_->timestamp_delta_ == 0x00FFFFFF) ? EXTENDED_TIMESTAMP : COMPLETE;
+    parsing_state_ = (parsed_msg_->timestamp_delta_ == 0x00FFFFFF)
+                         ? EXTENDED_TIMESTAMP
+                         : COMPLETE;
 
     readed_size = 3;
     return true;
@@ -282,17 +284,15 @@ boost::tribool RtmpHeaderParser::parse_extended_timestamp(std::istream& stream,
 
     if (parsed_msg_->format_type_ == RtmpHeaderFormat::FULL) {
       parsed_msg_->timestamp_ = timestamp;
-    }
-    else if (parsed_msg_->format_type_ == RtmpHeaderFormat::SAME_STREAM) {
+    } else if (parsed_msg_->format_type_ == RtmpHeaderFormat::SAME_STREAM) {
       parsed_msg_->timestamp_delta_ = timestamp;
-    }
-    else if (parsed_msg_->format_type_ == RtmpHeaderFormat::SAME_LENGTH_AND_STREAM) {
+    } else if (parsed_msg_->format_type_ ==
+               RtmpHeaderFormat::SAME_LENGTH_AND_STREAM) {
       parsed_msg_->timestamp_delta_ = timestamp;
-    }
-    else if (parsed_msg_->format_type_ == RtmpHeaderFormat::CONTINUATION) {
+    } else if (parsed_msg_->format_type_ == RtmpHeaderFormat::CONTINUATION) {
       return false;
     }
-    
+
     parsing_state_ = COMPLETE;
     readed_size = 4;
     return true;
@@ -301,4 +301,3 @@ boost::tribool RtmpHeaderParser::parse_extended_timestamp(std::istream& stream,
 }
 
 }  // namespace rtmp_protocol
-

@@ -13,6 +13,8 @@
 #include "media_message/MediaMsgParser.hpp"
 #include "data_message/DataMsgParser.hpp"
 
+#include "flv_message.h"
+
 #define MAX_CHANNEL_COUNT 319
 
 namespace rtmp_protocol {
@@ -49,6 +51,7 @@ class RtmpPayloadParser {
     media_msg_parser_.set_connection_id(id);
     data_msg_parser_.set_connection_id(id);
   }
+  castis::streamer::media_publish_es_context_ptr context_;  
 
  private:
   typedef struct received_payload_info {
@@ -65,9 +68,10 @@ class RtmpPayloadParser {
 
   typedef struct channel_info {
     unsigned int last_msg_len;
-    RtmpHeaderMsgTypeId::type last_msg_type_id;
-    unsigned int last_msg_timestamp;
-    unsigned int last_msg_timestamp_delta;
+    RtmpHeaderMsgTypeId::type last_msg_type_id{RtmpHeaderMsgTypeId::type::UNKNOWN};
+    unsigned int last_msg_timestamp{0};
+    unsigned int last_msg_timestamp_delta{0};
+    uint64_t last_msg_abs_timestamp{0};
   } channel_info;
 
   channel_info channels_[MAX_CHANNEL_COUNT];
@@ -81,7 +85,7 @@ class RtmpPayloadParser {
 
   unsigned int recv_chunk_size_;
   unsigned int connection_id_;
-
+      
   bool parse_unknown_message(RtmpHeader_ptr header_ptr, std::istream& stream,
                              size_t buf_size);
   void set_parsed_msg(RtmpMessage_ptr msg);
