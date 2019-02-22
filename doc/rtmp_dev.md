@@ -1,3 +1,104 @@
+#2019-02-22
+rtmp 다시 점검
+
+rtmp 의 payload 는flv file format 의 data 인데  flv header 는 제외된 형태입니다.
+flv file format 에 대한 설명은
+
+참조:
+Adobe Flash Video File Format Specification 10.1.2.01
+https://www.jianshu.com/p/e1e417eee2e7
+
+
+
+
+
+NOTE:
+TagType 8, 9 이외의 tag 는 drop 시켜야함
+
+
+#2019-02-21
+
+ngx_rtmp_hls_audio
+-> ngx_rtmp_hls_parse_aac_header
+
+#2019-02-20
+
+rtmp module 에서 audio 가 안나오는 경우가 있음
+
+nginx review :
+  - ngx_rtmp_hls_audio 를 다시 한 번 review 하기 
+  - ngx_rtmp_hls_parse_aac_header
+
+#2019-01-24
+
+* code review:
+
+async_read 시에 boost::asio::transfer_exactly(C0_C1_len) 의 용도 : 
+원하는 만큼 사이즈 만큼 socket 에서 read 해서 처리할 수 있음
+
+
+void Connection::start() {
+  RTMPLOGF(info, "start connection[%1%]", id_ );
+  unsigned int C0_C1_len = HANDSHAKE_MSG_VERSION_LEN + HANDSHAKE_MSG_LENGTH;
+
+  boost::asio::async_read(
+      socket_,
+      request_streambuf_,
+      boost::asio::transfer_exactly(C0_C1_len),
+      strand_.wrap(
+          boost::bind(&Connection::handle_read_handshake_C0_C1,
+                      shared_from_this(), boost::asio::placeholders::error)));
+}
+
+
+
+#2019-01-23
+
+* handshake 시에 time 값을 잘못주고 잘못 받고 있는 것 같음
+  - 더 확인 필요 
+
+* RTMP spec 의 window size review: 필요
+  - client 한테 요청받은 window size 에 맞추어, message를 보냄
+  - 관련 내부 변수 64bit 로 변경 
+  - 여태까지 받은 byte 의 경우 4byte 를 넘어갈 수 있어서,
+    windows size 를 보내는 것으로 변경
+  - 나머지 내부 로직은 유지
+  - 규격은 windows size 내에서 받은 byte 인지, 전체 byte 인지 정확하게 표현되어있지는 않다.
+  - client 와의 연동에는 변동이 없었음
+    
+
+* is_continuous_send_state_ 의 용도 review
+- 현재는 사용하지 않는 것과 마찬가지여서 삭제해도 될 것 같다.
+- 나중에 삭제 예정
+
+is_continuous_send_state_ : message 를 send 하고 있는 상태일 경우 true가 되게 하고   
+이 값이 false 인 경우, 바로 write 하고
+이 값이 true 인 경우, timer 를 등록해서 다음 번에 다시 write 를 하기 위해 만든 것 같음
+
+그런데 현재는 이 값이 true 가 되는 경우가 없이 실행되고 있음
+
+원래는 handle_play 함수에서 is_continuous_send_state_ 값을 true 로 set 하는 경우가 있었고
+true 로 setting 하면서 timer 도 등록되는데, 
+play 함수는 사용하지 않기 때문에, publish 에서는 영향을 주지 않았음
+  - handle_play 함수가 나중에 필요해지면 다시 살펴보는게 좋겠지만, 
+  - 필요성이 이해안되어 handle_play 함수에 있던 set 함수도 지웠음. 
+  - 필요가 없기 때문에 handle_play 함수 자체를 지울 수도 있음
+
+
+
+#2019-01-18
+
+nginx 실행 & 재실행
+
+sudo /usr/local/nginx/sbin/nginx -s stop
+sudo /usr/local/nginx/sbin/nginx
+
+app
+rtmp://172.16.33.52:1935/myapp/mystream
+
+browser
+http://localhost:8080/hls/mystream.m3u8
+
 
 #2019-01-11
 

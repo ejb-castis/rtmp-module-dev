@@ -9,7 +9,8 @@ RtmpParser::RtmpParser()
       parsing_state_(HEADER_PARSING),
       readed_bytes_count_(0),
       win_ack_size_(DEFAULT_WIN_ACK_SIZE),
-      next_ack_send_size_(DEFAULT_WIN_ACK_SIZE) {
+      next_ack_send_size_(DEFAULT_WIN_ACK_SIZE),
+      read_bytes_count_in_window_(0) {
   payload_parser_.set_connection_id(connection_id_);
   header_parser_.set_connection_id(connection_id_);
 }
@@ -21,7 +22,8 @@ RtmpParser::RtmpParser(rtmp_network::MessageSender_wptr sender,
       parsing_state_(HEADER_PARSING),
       readed_bytes_count_(0),
       win_ack_size_(DEFAULT_WIN_ACK_SIZE),
-      next_ack_send_size_(DEFAULT_WIN_ACK_SIZE) {
+      next_ack_send_size_(DEFAULT_WIN_ACK_SIZE),
+      read_bytes_count_in_window_(0) {
   payload_parser_.set_connection_id(connection_id_);
   header_parser_.set_connection_id(connection_id_);
 }
@@ -34,11 +36,22 @@ boost::tribool RtmpParser::parse(std::istream& stream, size_t buf_size,
     readed_bytes_count_ += total_readed_size;
 
     // send ack
+    // 여태까지 받은 byte 의 경우 4byte 를 넘어갈 수 있어서,
+    // windows size 내에서 받은 byte 를 보내는 것으로 변경
     if (readed_bytes_count_ >= next_ack_send_size_) {
-      next_ack_send_size_ += win_ack_size_;
-      push_to_send_queue(
-          RtmpMessage_ptr(new Acknowledgement(readed_bytes_count_)));
+      next_ack_send_size_ = readed_bytes_count_ + win_ack_size_;
+      push_to_send_queue(RtmpMessage_ptr(new Acknowledgement(win_ack_size_)));
       signal_send_message();
+
+      RTMPLOGF(info,
+               "connection_id[%1%] "
+               "total_read_bytes[%2%],actual_read_bytes_window_size[%3%],"
+               "window_size[%4%]",
+               connection_id_, readed_bytes_count_, read_bytes_count_in_window_,
+               win_ack_size_);
+      read_bytes_count_in_window_ = 0;
+    } else {
+      read_bytes_count_in_window_ += total_readed_size;
     }
   }
   return result;

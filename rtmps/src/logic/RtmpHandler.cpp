@@ -144,6 +144,8 @@ void RtmpHandler::handle_connect_message(ConnectMessage_ptr request) {
   double object_encoding = 3;
   unsigned int chunk_size = chunk_size_;
 
+  context_->provider_ = request->app_;
+
   ConnectResult_ptr connect_result = ConnectResult_ptr(
       new ConnectResult(chunk_stream_id, msg_stream_id, transaction_id,
                         chunk_size, object_encoding));
@@ -425,6 +427,7 @@ void RtmpHandler::handle_play(Play_ptr request) {
 
 void RtmpHandler::handle_media_message(MediaMessage_ptr request) {
   write_flv(context_, request);
+  write_flv_media_message_dump(context_, request);
   publish_to_streamer(context_, request);
 }
 

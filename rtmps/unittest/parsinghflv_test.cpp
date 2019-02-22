@@ -103,20 +103,32 @@ TEST(FLV, 4byte_to_vector_big_endian)
 {
   uint32_t value = 128;
   std::vector<unsigned char> v = to_vector(value);
+  std::vector<unsigned char> v2 = to_vector2(value);
 
+  // big endian 128
   unsigned char data[]= {
     0x00, 0x00, 0x00, 0x80
   };
 
-  // std::cout << "v[" ;
-  // for (auto i = v.begin(); i < v.end(); ++i) {
-  //   std::cout << static_cast<unsigned int>(*i) << " ";
-  // }
-  // std::cout <<"]"<< std::endl ;
-  // std::cout << to_hex(v.data(), 4) << std::endl ;
+  std::cout << to_hex(v) << std::endl ;
+  std::cout << to_hex(v2) << std::endl ;
 
   EXPECT_TRUE(std::equal(v.begin(), v.end() , data ));
+  EXPECT_TRUE(std::equal(v2.begin(), v2.end() , data ));
 }
+
+TEST(FLV, 4byte_to_string_big_endian)
+{
+  uint32_t value = 128;
+  std::string v = flv_util::to_string(value);
+
+  std::cout << to_hex(v) << std::endl ;
+  EXPECT_EQ('\x00', v[0]);
+  EXPECT_EQ('\x00', v[1]);
+  EXPECT_EQ('\x00', v[2]);
+  EXPECT_EQ('\x80', v[3]);
+}
+
 
 TEST(FLV, copy_buffer_t_to_vector)
 {

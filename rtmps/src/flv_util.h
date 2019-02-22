@@ -23,6 +23,8 @@ std::vector<unsigned char> to_vector(uint8_t value);
 std::vector<unsigned char> to_vector(uint16_t value);
 std::vector<unsigned char> to_vector(uint32_t value);
 std::vector<unsigned char> to_vector(uint64_t value);
+std::vector<unsigned char> to_vector2(uint32_t value);
+std::string to_string(uint32_t value);
 std::string to_string(buffer_t const& buffer);
 unsigned char to_uchar(char const ch);
 std::string to_hex(std::vector<unsigned char>& value, std::size_t showing_max_len=32);

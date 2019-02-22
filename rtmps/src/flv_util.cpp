@@ -7,6 +7,7 @@
 #include <string>
 #include <list>
 #include <memory>
+#include <cstring>
 
 #include "flv_util.h"
 
@@ -279,6 +280,26 @@ std::vector<unsigned char> to_vector(uint16_t value) {
   std::vector<unsigned char> v;
   v.push_back((value & 0xff00) >> 8);
   v.push_back((value & 0x00ff));
+  return v;
+}
+
+inline std::string to_string(uint32_t value) {
+  unsigned char temp[4];
+  temp[0] = (value & 0xff000000) >> 24;
+  temp[1] = (value & 0x00ff0000) >> 16;
+  temp[2] = (value & 0x0000ff00) >> 8;
+  temp[3] = value & 0x000000ff;
+  std::string str(reinterpret_cast<char*>(temp), 4);
+  return str;
+}
+std::vector<unsigned char> to_vector2(uint32_t value) {
+  unsigned char temp[4];
+  std::memcpy(temp, &value, 4);
+  std::vector<unsigned char> v;
+  v.push_back(temp[3]);
+  v.push_back(temp[2]);
+  v.push_back(temp[1]);
+  v.push_back(temp[0]);
   return v;
 }
 std::vector<unsigned char> to_vector(uint32_t value) {

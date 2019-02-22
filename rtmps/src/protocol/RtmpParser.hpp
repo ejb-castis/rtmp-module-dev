@@ -21,7 +21,8 @@ class RtmpParser : public rtmp_network::RequestParser {
   unsigned int connection_id_;
   unsigned long long readed_bytes_count_;
   unsigned int win_ack_size_;
-  unsigned int next_ack_send_size_;
+  uint64_t next_ack_send_size_;
+  uint64_t read_bytes_count_in_window_;
 
   RtmpHeaderParser header_parser_;
   RtmpPayloadParser payload_parser_;

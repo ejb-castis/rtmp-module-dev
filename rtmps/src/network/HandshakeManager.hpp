@@ -7,6 +7,7 @@ namespace rtmp_network {
 
 const unsigned HANDSHAKE_MSG_VERSION_LEN =1;
 const unsigned HANDSHAKE_MSG_LENGTH =1536;
+const unsigned HANDSHAKE_VERSION_LENGTH=4;
 enum { 
   DIGEST_MODE_0 = 0,
   DIGEST_MODE_1 = 1,
@@ -21,8 +22,8 @@ class HandshakeManager {
   unsigned int connection_id_;
   uint8_t client_rtmp_version_{0};
   uint32_t client_epoch_timestamp_{0};
-  uint32_t client_handshake_version_{0};
-
+  unsigned char client_handshake_version_[HANDSHAKE_VERSION_LENGTH];
+  
   uint8_t server_rtmp_version_{3};
   uint32_t server_epoch_timestamp_{0};
   uint32_t server_client_epoch_read_timestamp_{0};
