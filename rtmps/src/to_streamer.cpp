@@ -35,16 +35,24 @@ void process_rtmp_message(
 
   bool ret = flv_message::process_flv_es_message(
       context, static_cast<uint8_t>(request->get_header()->msg_type_id_),
-      static_cast<uint32_t>(request->get_header()->timestamp_),
+      static_cast<uint32_t>(request->get_header()->abs_timestamp_),
       static_cast<uint32_t>(request->get_header()->msg_length_), data, data_len,
       ec);
+
+  if (!ret) {
+    RTMPLOGF(error,
+             "process rtmp flv message failed. dropped message,"
+             "stream_type[%1%],stream_name[%2%],client_id[%3%],context[%4%]",
+             context->stream_type_, context->stream_name_, context->client_id_,
+             to_string(context));
+    return;
+  }
 
   RTMPLOGF(debug,
            "process es. "
            "stream_type[%1%],stream_name[%2%],client_id[%3%],context[%4%]",
            context->stream_type_, context->stream_name_, context->client_id_,
            to_string(context));
-
   publish_to_streamer(context);
 }
 

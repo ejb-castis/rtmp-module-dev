@@ -161,7 +161,7 @@ boost::tribool RtmpHeaderParser::parse_basic_header_3byte(std::istream& stream,
   if (buf_size >= 2) {
     unsigned short cs_id_field = 0;
 
-    stream.read(reinterpret_cast<char*>(cs_id_field), 2);
+    stream.read(reinterpret_cast<char*>(&cs_id_field), 2);
     cs_id_field = network_util::ntoh_2(cs_id_field);
     unsigned int cs_id_low = cs_id_field & 0xFF;
     unsigned int cs_id_high = (cs_id_field & 0xFF00) >> 8;

@@ -1,42 +1,42 @@
 #include "RtmpHandler.hpp"
-#include "../protocol/control_message/ControlMessage.hpp"
+#include "../protocol/cmd_message/CallError.hpp"
 #include "../protocol/cmd_message/ConnectResult.hpp"
 #include "../protocol/cmd_message/OnBWDone.hpp"
-#include "../protocol/cmd_message/CallError.hpp"
 #include "../protocol/cmd_message/OnFCPublish.hpp"
-#include "../protocol/cmd_message/SimpleResult.hpp"
 #include "../protocol/cmd_message/OnStatus.hpp"
-#include "../protocol/data_message/RtmpSampleAccess.hpp"
+#include "../protocol/cmd_message/SimpleResult.hpp"
+#include "../protocol/control_message/ControlMessage.hpp"
 #include "../protocol/data_message/OnMetaData.hpp"
+#include "../protocol/data_message/RtmpSampleAccess.hpp"
 #include "StreamManager.hpp"
 #include "rtmpmodulelogger.h"
 
-#include <iostream>
 #include <algorithm>
 #include <boost/bind/bind.hpp>
+#include <iostream>
 
-#include "write_flv.h"
 #include "publish_to_streamer.h"
 #include "rtmpmodulelogger.h"
+#include "write_flv.h"
 
 using namespace rtmp_protocol;
 namespace rtmp_logic {
 
 const unsigned int NEW_STREAM_ID = 3555;
+#define DEFAULT_WIN_ACK_SIZE 5000000
 
 RtmpHandler::RtmpHandler(rtmp_network::MessageSender_wptr sender,
                          unsigned int id)
-    : rtmp_network::RequestHandler(sender),
-      chunk_size_(128),
-      id_(id) {
-}
+    : rtmp_network::RequestHandler(sender), chunk_size_(128), id_(id) {}
 
-unsigned int RtmpHandler::get_id() {
-  return id_;
-}
+unsigned int RtmpHandler::get_id() { return id_; }
 
 void RtmpHandler::notify_disconnect() {
-  RTMPLOGF(info,"connection closed. ready to end stream. stream_type[%1%],stream_name[%2%],client_id[%3%]",context_->stream_type_, context_->stream_name_, context_->client_id_);
+  RTMPLOGF(info,
+           "connection closed. ready to end stream. "
+           "stream_type[%1%],stream_name[%2%],client_id[%3%]",
+           context_->stream_type_, context_->stream_name_,
+           context_->client_id_);
   context_->ready_to_end_of_stream_ = true;
 
   // send remains
@@ -46,27 +46,26 @@ void RtmpHandler::notify_disconnect() {
 void RtmpHandler::handle_request(rtmp_network::Message_ptr request) {
   RtmpMessage_ptr rtmp_msg = boost::dynamic_pointer_cast<RtmpMessage>(request);
   if (rtmp_msg == NULL) {
-    RTMPLOG(warning)
-        << "handler_id:" << get_id()
-        << ",this message is not supported"
-        << ",message_info:"<< request->to_string();
+    RTMPLOG(warning) << "handler_id:" << get_id()
+                     << ",this message is not supported"
+                     << ",message_info:" << request->to_string();
     return;
   }
 
-  RTMPLOG(info) << "handler_id:" << get_id() 
-                    << ",message_name:" << rtmp_msg->get_class_name() 
-                    << ",message_info:"<< rtmp_msg->to_string();
+  RTMPLOG(info) << "handler_id:" << get_id()
+                << ",message_name:" << rtmp_msg->get_class_name()
+                << ",message_info:" << rtmp_msg->to_string();
 
   switch (rtmp_msg->get_type()) {
     case RtmpMessageType::CONNECT: {
-      ConnectMessage_ptr msg = boost::dynamic_pointer_cast<ConnectMessage>(
-          rtmp_msg);
+      ConnectMessage_ptr msg =
+          boost::dynamic_pointer_cast<ConnectMessage>(rtmp_msg);
       handle_connect_message(msg);
       break;
     }
     case RtmpMessageType::RELEASE_STREAM: {
-      ReleaseStream_ptr msg = boost::dynamic_pointer_cast<ReleaseStream>(
-          rtmp_msg);
+      ReleaseStream_ptr msg =
+          boost::dynamic_pointer_cast<ReleaseStream>(rtmp_msg);
       handle_release_stream(msg);
       break;
     }
@@ -81,14 +80,14 @@ void RtmpHandler::handle_request(rtmp_network::Message_ptr request) {
       break;
     }
     case RtmpMessageType::CREATE_STREAM: {
-      CreateStream_ptr msg = boost::dynamic_pointer_cast<CreateStream>(
-          rtmp_msg);
+      CreateStream_ptr msg =
+          boost::dynamic_pointer_cast<CreateStream>(rtmp_msg);
       handle_create_stream(msg);
       break;
     }
     case RtmpMessageType::DELETE_STREAM: {
-      DeleteStream_ptr msg = boost::dynamic_pointer_cast<DeleteStream>(
-          rtmp_msg);
+      DeleteStream_ptr msg =
+          boost::dynamic_pointer_cast<DeleteStream>(rtmp_msg);
       handle_delete_stream(msg);
       break;
     }
@@ -104,14 +103,14 @@ void RtmpHandler::handle_request(rtmp_network::Message_ptr request) {
     }
     case RtmpMessageType::AUDIO:
     case RtmpMessageType::VIDEO: {
-      MediaMessage_ptr msg = boost::dynamic_pointer_cast<MediaMessage>(
-          rtmp_msg);
+      MediaMessage_ptr msg =
+          boost::dynamic_pointer_cast<MediaMessage>(rtmp_msg);
       handle_media_message(msg);
       break;
     }
     case RtmpMessageType::SET_CHUNK_SIZE: {
-      SetChunkSize_ptr msg = boost::dynamic_pointer_cast<SetChunkSize>(
-          rtmp_msg);
+      SetChunkSize_ptr msg =
+          boost::dynamic_pointer_cast<SetChunkSize>(rtmp_msg);
       handle_set_chunk_size(msg);
       break;
     }
@@ -121,8 +120,7 @@ void RtmpHandler::handle_request(rtmp_network::Message_ptr request) {
     }
     default: {
       RTMPLOG(info) << "handler_id:" << get_id()
-                         << ",unknown message:"
-                         << rtmp_msg->get_class_name();
+                    << ",unknown message:" << rtmp_msg->get_class_name();
       break;
     }
   }
@@ -130,11 +128,11 @@ void RtmpHandler::handle_request(rtmp_network::Message_ptr request) {
 }
 
 void RtmpHandler::handle_connect_message(ConnectMessage_ptr request) {
-  WindowAcknowledgementSize_ptr win_ack_size = WindowAcknowledgementSize_ptr(
-      new WindowAcknowledgementSize(2500000));
+  WindowAcknowledgementSize_ptr win_ack_size =
+      WindowAcknowledgementSize_ptr(new WindowAcknowledgementSize(DEFAULT_WIN_ACK_SIZE));
 
   SetPeerBandwidth_ptr set_peer_bw = SetPeerBandwidth_ptr(
-      new SetPeerBandwidth(2500000, SetPeerBandwidth::LIMIT_TYPE_DYNAMIC));
+      new SetPeerBandwidth(DEFAULT_WIN_ACK_SIZE, SetPeerBandwidth::LIMIT_TYPE_DYNAMIC));
 
   StreamBegin_ptr stream_begin = StreamBegin_ptr(new StreamBegin(0));
 
@@ -159,26 +157,24 @@ void RtmpHandler::handle_connect_message(ConnectMessage_ptr request) {
   push_to_send_queue(set_peer_bw);
   push_to_send_queue(stream_begin);
   push_to_send_queue(connect_result);
-  //push_to_send_queue(bw_done);
+  // push_to_send_queue(bw_done);
   signal_send_message();
 
   return;
 }
 
 void RtmpHandler::handle_release_stream(ReleaseStream_ptr request) {
-
   // auto manager = StreamManager::get_instance();
   // manager.release_stream(request->stream_name_);
-  
+
   RtmpHeaderFormat::format_type header_type = RtmpHeaderFormat::SAME_STREAM;
   unsigned int chunk_stream_id = request->get_header()->chunk_stream_id_;
   unsigned int msg_stream_id = request->get_header()->msg_stream_id_;
   double transaction_id = request->get_transaction_id();
   unsigned int chunk_size = chunk_size_;
 
-  rtmp_network::Message_ptr simple_result = SimpleResult_ptr(
-    new SimpleResult(header_type, chunk_stream_id, msg_stream_id,
-                     transaction_id, chunk_size));
+  rtmp_network::Message_ptr simple_result = SimpleResult_ptr(new SimpleResult(
+      header_type, chunk_stream_id, msg_stream_id, transaction_id, chunk_size));
 
   push_to_send_queue(simple_result);
 
@@ -188,7 +184,6 @@ void RtmpHandler::handle_release_stream(ReleaseStream_ptr request) {
 }
 
 void RtmpHandler::handle_fc_publish(FCPublish_ptr request) {
-
   {  // send response
     RtmpHeaderFormat::format_type header_type = RtmpHeaderFormat::SAME_STREAM;
     unsigned int chunk_stream_id = request->get_header()->chunk_stream_id_;
@@ -201,7 +196,7 @@ void RtmpHandler::handle_fc_publish(FCPublish_ptr request) {
                          transaction_id, chunk_size));
 
     push_to_send_queue(simple_result);
-    }
+  }
 
   RtmpHeaderFormat::format_type header_type = RtmpHeaderFormat::SAME_STREAM;
   unsigned int chunk_stream_id = request->get_header()->chunk_stream_id_;
@@ -221,7 +216,6 @@ void RtmpHandler::handle_fc_publish(FCPublish_ptr request) {
 }
 
 void RtmpHandler::handle_fc_unpublish(FCUnPublish_ptr request) {
-
   {  // send response
     RtmpHeaderFormat::format_type header_type = RtmpHeaderFormat::SAME_STREAM;
     unsigned int chunk_stream_id = request->get_header()->chunk_stream_id_;
@@ -239,9 +233,7 @@ void RtmpHandler::handle_fc_unpublish(FCUnPublish_ptr request) {
   return;
 }
 
-
 void RtmpHandler::handle_create_stream(CreateStream_ptr request) {
-
   RtmpHeaderFormat::format_type header_type = RtmpHeaderFormat::SAME_STREAM;
   unsigned int chunk_stream_id = request->get_header()->chunk_stream_id_;
   unsigned int msg_stream_id = request->get_header()->msg_stream_id_;
@@ -251,7 +243,7 @@ void RtmpHandler::handle_create_stream(CreateStream_ptr request) {
   double new_stream_id = NEW_STREAM_ID;
   context_->stream_id_ = static_cast<unsigned int>(new_stream_id);
   context_->ready_to_end_of_stream_ = false;
-  
+
   rtmp_network::Message_ptr simple_result = SimpleResult_ptr(
       new SimpleResult(header_type, chunk_stream_id, msg_stream_id,
                        transaction_id, chunk_size, new_stream_id));
@@ -262,9 +254,7 @@ void RtmpHandler::handle_create_stream(CreateStream_ptr request) {
   return;
 }
 
-
 void RtmpHandler::handle_delete_stream(DeleteStream_ptr request) {
-
   RtmpHeaderFormat::format_type header_type = RtmpHeaderFormat::SAME_STREAM;
   unsigned int chunk_stream_id = request->get_header()->chunk_stream_id_;
   unsigned int msg_stream_id = request->get_header()->msg_stream_id_;
@@ -273,7 +263,7 @@ void RtmpHandler::handle_delete_stream(DeleteStream_ptr request) {
   unsigned int stream_id = request->stream_id();
 
   context_->ready_to_end_of_stream_ = true;
-  
+
   rtmp_network::Message_ptr simple_result = SimpleResult_ptr(
       new SimpleResult(header_type, chunk_stream_id, msg_stream_id,
                        transaction_id, chunk_size, stream_id));
@@ -289,39 +279,43 @@ void RtmpHandler::handle_delete_stream(DeleteStream_ptr request) {
 // 1. according to spec, send result fro publish message
 
 // 2. remove OnStatus message according to followed guess
-// when OnStatus message should be sent ? 
-// guess when server starts to publish, server should send OnStatus message to clients, 
-// in this case, client be expected to handle status code in OnStatus message with OnStatusCode::ON_STATUS_CODE_PUBLISH_START
-// 
-// TODO: 
-// when OnStatus message should be sent ? 
+// when OnStatus message should be sent ?
+// guess when server starts to publish, server should send OnStatus message to
+// clients, in this case, client be expected to handle status code in OnStatus
+// message with OnStatusCode::ON_STATUS_CODE_PUBLISH_START
+//
+// TODO:
+// when OnStatus message should be sent ?
 
 void RtmpHandler::handle_publish(Publish_ptr request) {
   RtmpHeaderFormat::format_type header_type = RtmpHeaderFormat::FULL;
-  unsigned int chunk_stream_id = request->get_header()->chunk_stream_id_;
-  unsigned int msg_stream_id = request->get_header()->msg_stream_id_;
+  
+  //FIXME:
+  //nginx 처럼 해보기
+  unsigned int chunk_stream_id = 5;//request->get_header()->chunk_stream_id_;
+  unsigned int msg_stream_id = 1;//request->get_header()->msg_stream_id_;
+  
   double transaction_id = request->get_transaction_id();
   unsigned int chunk_size = chunk_size_;
 
-
-  rtmp_network::Message_ptr simple_result = SimpleResult_ptr(
-      new SimpleResult(header_type, chunk_stream_id, msg_stream_id,
-                       transaction_id, chunk_size, msg_stream_id));
-  push_to_send_queue(simple_result);
+  // rtmp_network::Message_ptr simple_result = SimpleResult_ptr(
+  //     new SimpleResult(header_type, chunk_stream_id, msg_stream_id,
+  //                      transaction_id, chunk_size, msg_stream_id));
+  // push_to_send_queue(simple_result);
 
   std::string stream_name = request->stream_name_;
   std::string stream_type = request->stream_type_;
-  //std::string client_id = stream_type + ":" +  stream_name + ":" + std::to_string(id_);
+  // std::string client_id = stream_type + ":" +  stream_name + ":" +
+  // std::to_string(id_);
   std::string client_id = "9_1_38567520";
 
   context_->stream_name_ = stream_name;
   context_->stream_type_ = stream_type;
   context_->client_id_ = client_id;
 
-  rtmp_network::Message_ptr on_status = OnStatus_ptr(
-      new OnStatus(header_type, chunk_stream_id, msg_stream_id, transaction_id,
-                   chunk_size, OnStatusCode::ON_STATUS_CODE_PUBLISH_START,
-                   stream_name, client_id));
+  rtmp_network::Message_ptr on_status = OnStatus_ptr(new OnStatus(
+      header_type, chunk_stream_id, msg_stream_id, transaction_id, chunk_size,
+      OnStatusCode::ON_STATUS_CODE_PUBLISH_START, stream_name, client_id));
 
   push_to_send_queue(on_status);
 
@@ -337,8 +331,8 @@ void RtmpHandler::handle_play(Play_ptr request) {
 
   // TODO: process when media data flow begins.
   unsigned int new_stream_id = 1;
-  rtmp_network::Message_ptr begin = StreamBegin_ptr(
-      new StreamBegin(new_stream_id));
+  rtmp_network::Message_ptr begin =
+      StreamBegin_ptr(new StreamBegin(new_stream_id));
 
   RtmpHeaderFormat::format_type header_type = RtmpHeaderFormat::FULL;
   unsigned int chunk_stream_id = 20;
@@ -351,19 +345,17 @@ void RtmpHandler::handle_play(Play_ptr request) {
   std::string stream_name = "livestream";
   std::string client_id = "9_1_38567520";
 
-  rtmp_network::Message_ptr play_reset = OnStatus_ptr(
-      new OnStatus(header_type, chunk_stream_id, msg_stream_id, transaction_id,
-                   chunk_size, OnStatusCode::ON_STATUS_CODE_PLAY_RESET,
-                   stream_name, client_id));
+  rtmp_network::Message_ptr play_reset = OnStatus_ptr(new OnStatus(
+      header_type, chunk_stream_id, msg_stream_id, transaction_id, chunk_size,
+      OnStatusCode::ON_STATUS_CODE_PLAY_RESET, stream_name, client_id));
 
-  rtmp_network::Message_ptr play_start = OnStatus_ptr(
-      new OnStatus(header_type, chunk_stream_id, msg_stream_id, transaction_id,
-                   chunk_size, OnStatusCode::ON_STATUS_CODE_PLAY_START,
-                   stream_name, client_id));
+  rtmp_network::Message_ptr play_start = OnStatus_ptr(new OnStatus(
+      header_type, chunk_stream_id, msg_stream_id, transaction_id, chunk_size,
+      OnStatusCode::ON_STATUS_CODE_PLAY_START, stream_name, client_id));
 
-  rtmp_network::Message_ptr sample_access = RtmpSampleAccess_ptr(
-      new RtmpSampleAccess(header_type, chunk_stream_id, msg_stream_id,
-                           chunk_size));
+  rtmp_network::Message_ptr sample_access =
+      RtmpSampleAccess_ptr(new RtmpSampleAccess(header_type, chunk_stream_id,
+                                                msg_stream_id, chunk_size));
 
   MediaMetaData meta_data(MediaMetaDataType::DETAIL);
   meta_data.width_ = 320;
@@ -392,9 +384,8 @@ void RtmpHandler::handle_play(Play_ptr request) {
   meta_data.video_device_ = "Chicony USB 2.0 Camera";
   meta_data.video_key_frame_frequency_ = 5;
 
-  rtmp_network::Message_ptr meta_data_msg = OnMetaData_ptr(
-      new OnMetaData(header_type, chunk_stream_id, msg_stream_id, chunk_size,
-                     meta_data));
+  rtmp_network::Message_ptr meta_data_msg = OnMetaData_ptr(new OnMetaData(
+      header_type, chunk_stream_id, msg_stream_id, chunk_size, meta_data));
 
   push_to_send_queue(begin);
   push_to_send_queue(play_reset);
@@ -406,24 +397,24 @@ void RtmpHandler::handle_play(Play_ptr request) {
   return;
 }
 
-//TODO: 
+// TODO:
 // 1. when client publish data, receiving data here.
 // publish type : (from spec)
-// record : The stream is published and the data is recorded to a new file. 
-//  The file is stored on the server in a subdirectory within the directory that contains the server application. 
-//  If thefile already exists, it is overwritten 
-// append: The stream is published and the data is appended to a file. 
-//  If no file is found, it is created. 
-// live: Live data is published without recording it in a file. 
+// record : The stream is published and the data is recorded to a new file.
+//  The file is stored on the server in a subdirectory within the directory that
+//  contains the server application. If thefile already exists, it is
+//  overwritten
+// append: The stream is published and the data is appended to a file.
+//  If no file is found, it is created.
+// live: Live data is published without recording it in a file.
 //
 // Q: who need "live" type publish ? or which case?
-// 
+//
 // TODO:
 // when server begin to stream audio, video data, sending data here?
 // implement sending data handler somewhere else
 // HECK:
-// testing 
-
+// testing
 
 void RtmpHandler::handle_media_message(MediaMessage_ptr request) {
   write_flv(context_, request);
@@ -440,9 +431,9 @@ void RtmpHandler::handle_on_metadata() {
   RTMPLOG(debug) << "handle OnMetadata";
 }
 
-void RtmpHandler::set_context(castis::streamer::media_publish_es_context_ptr ctx) {
+void RtmpHandler::set_context(
+    castis::streamer::media_publish_es_context_ptr ctx) {
   context_ = ctx;
 }
-
 
 }  // namespace rtmp_logic

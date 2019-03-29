@@ -1,4 +1,412 @@
+#2019-03-21
+
+rtmpcamera app 은 아직 연동 안됨 : 
+  - 이유 밝히지 못함 
+  - nginx 와는 연동이 되는 것으로 보아, nginx 등의 소스코드를 살펴보아야 할 것 같음
+
+#2019-03-20
+
+RtmpHeaderParser::parse_basic_header_3byte() 함수에 버그:
+- pointer 를 넘겨야하는데, 그냥 변수를 넘겨서 죽는 문제가 있어서 수정함
+
+chunkStream_id 가 319 밖에 안될 거라는 가정을 하고 만든 소스가 있었는데, 
+그 가정에 벗어나는 client app 이 있었다. 
+코드 refactoring 겸, structure 를 바꾸어야 할 것 같음
+
+channel_info channels_[MAX_CHANNEL_COUNT];
+array 대신 map 으로 변경 
+
+
+
+#2019-03-18
+
+추가된 로그:
+
+rtmp-module,0.2.7,2019-03-18,11:03:55.133328,Report,RtmpPayloadParser.cpp::parse_payload:283,,message[AudioMessage:id[18],type[8],length[7],timestamp[0],abs_timestamp[0],header[RtmpHeader:format_type:0,chunk_stream_id:4,timestamp:0,msg_length:7,msg_type_id:8,msg_stream_id:3555,timestamp:0,abs_timestamp:0,message_id:0],data_len:7,data:af 00 11 90 56 e5 00 ]
+rtmp-module,0.2.7,2019-03-18,11:03:55.133411,Information,RtmpHandler.cpp::handle_request:55,,handler_id:0,message_name:AudioMessage,message_info:AudioMessage:id[18],type[8],length[7],timestamp[0],abs_timestamp[0],header[RtmpHeader:format_type:0,chunk_stream_id:4,timestamp:0,msg_length:7,msg_type_id:8,msg_stream_id:3555,timestamp:0,abs_timestamp:0,message_id:0],data_len:7,data:af 00 11 90 56 e5 00 
+rtmp-module,0.2.7,2019-03-18,11:03:55.138054,Information,flv_message.cpp::process_flv_es_message:126,,audiospecificconfig[AF 00 11 90 56 E5 00]
+rtmp-module,0.2.7,2019-03-18,11:03:55.138152,Debug,flv_message.cpp::process_flv_es_message:136,,flv_audio_data[sound_format[AAC:10],sountd_rate[44khz:3],sound_size[16bit:1],sound_type[Stereo:1],aac_packet_type[AACSequenceHeader:0]],flv_audio_spec_config[audio_object_type[AACLC:2],sampling_frequency[48000Hz:3],channel_count[2channel(s):2]]
+rtmp-module,0.2.7,2019-03-18,11:03:55.138291,Debug,flv_message.cpp::process_flv_es_message:144,,audiospecificconfig ,object_type[2], sample_rate[48000],channel_count[2]
+rtmp-module,0.2.7,2019-03-18,11:03:55.138336,Debug,publish_to_streamer.cpp::publish_to_streamer:282,,process es. context[publish_id[],publish_state[begin],frame_number[0],video_frame_number[0],audio_frame_number[0],no es_frame_data],stream_type[live],stream_name[ffmpeg],client_id[9_1_38567520]
+
+
+
+
+rtmp-module,0.2.7,2019-03-18,11:03:55.151692,Report,RtmpPayloadParser.cpp::parse_payload:283,,message[VideoMessage:id[20],type[9],length[53628],timestamp[34],abs_timestamp[34],header[RtmpHeader:format_type:1,chunk_stream_id:6,timestamp_delta:34,msg_length:53628,msg_type_id:9,msg_stream_id:3555,timestamp:34,abs_timestamp:34,message_id:0],data_len:53628,data:27 01 00 00 a6 00 00 00 02 09 f0 00 00 d1 6d 41 9a 24 6c 41 4f fe b5 2a 80 00 04 01 7e 23 ]
+rtmp-module,0.2.7,2019-03-18,11:03:55.151756,Information,RtmpHandler.cpp::handle_request:55,,handler_id:0,message_name:VideoMessage,message_info:VideoMessage:id[20],type[9],length[53628],timestamp[34],abs_timestamp[34],header[RtmpHeader:format_type:1,chunk_stream_id:6,timestamp_delta:34,msg_length:53628,msg_type_id:9,msg_stream_id:3555,timestamp:34,abs_timestamp:34,message_id:0],data_len:53628,data:27 01 00 00 a6 00 00 00 02 09 f0 00 00 d1 6d 41 9a 24 6c 41 4f fe b5 2a 80 00 04 01 7e 23 
+rtmp-module,0.2.7,2019-03-18,11:03:55.158306,Debug,flv_message.cpp::process_flv_es_message:276,,video data ,timestamp[34], cts[166],keyframe[2]
+rtmp-module,0.2.7,2019-03-18,11:03:55.158355,Debug,flv_message.cpp::process_flv_es_message:284,,video data ,dts[3060], cts[14940], pts[18000], key[2]
+rtmp-module,0.2.7,2019-03-18,11:03:55.158379,Debug,publish_to_streamer.cpp::publish_to_streamer:282,,process es. context[publish_id[],publish_state[begin],frame_number[2],video_frame_number[2],audio_frame_number[0],es_frame_data exist],stream_type[live],stream_name[ffmpeg],client_id[9_1_38567520]
+rtmp-module,0.2.7,2019-03-18,11:03:55.158405,Debug,publish_to_streamer.cpp::publish_to_streamer:294,,publish es. context[publish_id[],publish_state[begin],frame_number[2],video_frame_number[2],audio_frame_number[0],es_frame_data exist],stream_type[live],stream_name[ffmpeg],client_id[9_1_38567520]
+
+
+
+#2019-03-15
+log ... 다시 정리해보기
+
+AS-IS:
+
+streamer,1.0.1,2019-03-15,10:17:35.438285,Report,RtmpPayloadParser.cpp::parse_payload:286,,message[AudioMessage:id[75],type[8],length[279],timestamp[0],abs_timestamp[0],header[chunk_header_format[0:FULL],chunk_stream_id[4],timestamp[0],timestamp_delta[0],msg_length[279],msg_type_id[8:AUDIODATA],msg_stream_id[3555],abs_timestamp[0],message_id[0]],data_len:279,data:af 01 de 02 00 4c 61 76 63 35 37 2e 34 38 2e 31 30 31 00 02 2c 6b 5b 6a 0c 5d 0a 07 4e 9b ]
+streamer,1.0.1,2019-03-15,10:17:35.438457,Debug,RtmpHandler.cpp::handle_request:58,,handler_id:1,message_name:AudioMessage,message_info:AudioMessage:id[75],type[8],length[279],timestamp[0],abs_timestamp[0],header[chunk_header_format[0:FULL],chunk_stream_id[4],timestamp[0],timestamp_delta[0],msg_length[279],msg_type_id[8:AUDIODATA],msg_stream_id[3555],abs_timestamp[0],message_id[0]],data_len:279,data:af 01 de 02 00 4c 61 76 63 35 37 2e 34 38 2e 31 30 31 00 02 2c 6b 5b 6a 0c 5d 0a 07 4e 9b 
+streamer,1.0.1,2019-03-15,11:26:31.495770,Debug,ingest.cpp::OnEsChunkImpl:760,,frame[track:2][av:audio][key:1][pts:2962800][dts:2962800][size:350][buf:21 1A 8F 91 80 F7 FF F1 4C D1 4C 91 95 AE 6D C3 32 D5 2B 89 BB AB 66 A6 5D 55 EA 5D C9 F7 FD C2]
+
+streamer,1.0.1,2019-03-15,11:26:00.806604,Debug,packager.cpp::makeSegment:954,,[myapp/ffmpeg] success to make segment, type[audio], pts[139735508224140,32741:39:56.757479], dur[176580,00:00:01.962000], sample-cnt[92], size[31323], llsegno[776308379]
+streamer,1.0.1,2019-03-15,11:26:00.856916,Debug,packager.cpp::makeSegment:946,,[myapp/ffmpeg] success to make fragment, type[video], pts[139735508397210], dur[5940], sample-cnt[2], size[156708]
+
+#2019-03-07
+flv audio 정보 구하는 함수에 버그 수정
+  : audio 가 aac 가 아닌 경우에 생기는 버그여서, 그동안 발견되진 않았을 것 같음
+  
+
+app test :
+
+live push :
+  resolution : 720p
+  cbr
+  20fps
+  450~600
+  chrome-extension hls : ok 
+  chrome-extension dash : ok 
+  dsah.js (site) : not ok
+  vls : ok
+  
+nanostream :
+  resolution : 720p
+  frame rate : 20fps, 25fps, 30fps
+  video bitrate : 500 kbps
+  keyframe distance : 1sec
+
+  resolution : 1080p
+  frame rate : 30fps
+  video bitrate : 7500 kbps
+  keyframe distance : 5sec
+
+  chrome-extension hls : ok
+  chrome-extension dash : not ok 
+  dsah.js (site) : not ok
+  vls : ok
+
+nginx 설정 :
+application myapp {
+            live on;
+
+            dash on;
+            dash_path /data/dash;
+            dash_fragment 3s;
+            dash_playlist_length 60s;
+
+            hls on;
+            hls_path /data/hls;
+            hls_fragment 3s;
+            hls_playlist_length 60s;
+
+--------------------------------------------------------------
+rtmp app test :
+
+live push :
+  resolution : 720p
+  cbr
+  20fps
+  450~600
+  chrome-extension hls : ok 
+  chrome-extension dash : ok 
+  dsah.js (site) : not ok
+  vls : ok
+  
+nanostream :
+  resolution : 720p
+  frame rate : 20fps, 25fps, 30fps
+  video bitrate : 500 kbps
+  keyframe distance : 1sec
+
+  resolution : 1080p
+  frame rate : 30fps
+  video bitrate : 7500 kbps
+  keyframe distance : 5sec
+
+  chrome-extension hls : ok
+  chrome-extension dash : not ok 
+  dsah.js (site) : not ok
+  vls : ok
+
+nginx 설정 :
+
+rtmp {
+    server {
+        listen 1935;
+        #chunk_size 4000;
+        chunk_size 8192;
+        ping 30s;
+        notify_method get;
+
+        application myapp {
+            live on;
+
+            dash on;
+            dash_path /data/dash;
+            dash_fragment 5s;
+            dash_playlist_length 30s;
+
+            hls on;
+            hls_path /data/hls;
+            hls_fragment 3;
+            hls_playlist_length 60;
+            #hls_sync 100ms;
+
+
+
+
+#2019-03-04
+video 쪽까지 다시 확인한 후에는
+nginx 의 audio timestamp log 확인을 해보아야 할 것 같음
+1. audio message 를 drop 시켰을 때 보정? 
+2. ngix 에서 timestamp 값을 보정해주는 루틴을 streamer 에 적용해보았을 때, 
+확인 사항: 
+audio 묵음 현상이 개선되는 지? 
+ngix 의 log 와 비슷한 로그가 만들어지는지? 
+
+flv AVCPacketType 이 AVC sequence header 일 때 (0, 1, 2 중 1일때)
+이 경우, composition time 처리 
+nginx 의 flv 의 avc 처리 부분 코드 확인 :
+* 소스 부분은 예전에도 확인 한 적이 있지만, 다시 확인 하기로 함
+* 지난  번에는 nginx 의 log 확인은 하지 않았기에 이번에는 nginx 의 log 도 확인해보기로 함
+
+* sps, pps 가 multi 일 때의 버그는 structure 를 고쳐서 처리하든지, 
+  sps, pps 마다 구분자로 0001 을 넣어주는 방식으로 구현을 고쳐야 할 것 같다. 
+  현재는 제일 앞에만 0001 을 넣어주는 방식 
+
+#2019-02-28
+flv AVCPacketType 이 AVC sequence header 일 때 (0, 1, 2 중 0일때)
+AVCDecoderConfigurationRecord parsing 부분 점검
+
+AVCDecoderConfigurationRecord 형식 (ISO 14496-15)
+https://gist.github.com/uupaa/8493378ec15f644a3d2b
+
+```cpp
+aligned(8) class AVCDecoderConfigurationRecord {
+    unsigned int(8) configurationVersion = 1;
+    unsigned int(8) AVCProfileIndication;
+    unsigned int(8) profile_compatibility;
+    unsigned int(8) AVCLevelIndication;
+    bit(6) reserved = ‘111111’b;
+    unsigned int(2) lengthSizeMinusOne;
+    bit(3) reserved = ‘111’b;
+    unsigned int(5) numOfSequenceParameterSets;
+    for (i=0; i< numOfSequenceParameterSets; i++) {
+      unsigned int(16) sequenceParameterSetLength ;
+      bit(8*sequenceParameterSetLength) sequenceParameterSetNALUnit;
+    }
+    unsigned int(8) numOfPictureParameterSets;
+    for (i=0; i< numOfPictureParameterSets; i++) {
+      unsigned int(16) pictureParameterSetLength;
+      bit(8*pictureParameterSetLength) pictureParameterSetNALUnit;
+    }
+}
+```
+
+ggogle shaka packager 코드 살펴보기:
+  data길이, 값에 대한 fail 처리가 있음
+  spec 대로 구현되어있음
+    첫 번째 sps 에서 h264 nalu sps paring 해서,
+    pixel_width, pixel_height 구해냄    
+
+nginx 의 코드 살펴보기 
+  data길이, 값에 대한 fail 처리가 있음  
+  spec 대로 구현되어있음
+    hls 에 사용할 때는 모든 sps, pps 의 앞에 0001 을 추가하는 코드가 있음
+  h264 nalu sps paring 하진 않음
+      
+streamer 의 코드 살펴보기:
+  sps, pps 가 한 개씩인 경우는 spec 대로 구현되어있음  
+  sps, pps 가 복수 개일 경우 버그 있음
+    첫 번째 sps, pps 만 codec info 로 구하는 버그
+    sps 가 복수 개일 경우, pps 를 잘못구하는 버그    
+    - sps, pps 가 복수 개가 아닌 경우가 아직 없어서 이 문제가 발생하지 않았을 수도 있음    
+  h264 nalu sps paring 하진 않음
+
+#2019-02-27
+audio, video frame 이 하나 이상 만들어졌을 때, es upload 시작하게 수정해서 test 
+  - audio 문제 해결 안됨
+
+straemer log 에 video pts 가 역전되는 로그가 보임. 문제 원인 파악 하기 
+연속한 video frame 이 
+dts 는 같고, cts 가 커졌다가 , 작아지면 pts 가 역전되는 현상이 생김
+
+#2019-02-26
+* 예외 처리는 추가해서 죽는 문제는 해결되었지만, 여전히 소리가 안나오는 문제가 있음
+* flv 로 저장한 파일에서는 소리가 잘 나오기 때문에, es upload 처리할 때, 문제가 있다고 볼 수 있음.
+  - 잘못 전달된 message 까지 저장한 상태에서도 flv 파일은 소기가 잘 나오는 듯 하다. 
+  - 잘못된 message 로 인한 시간 정보 오류 때문일 가능성이 높지 않을까. 
+
+* ffmpeg 으로 rtmp 전송 시, AudioSpecificConfig 정보가 없는 audio message 를 보내주는 문제가 있었다. 
+nginx 의 경우, 이 message를 drop 시키는 반면, 
+streamer 는 그냥 처리하다가, 죽거나, 잘못된 audio 정보로 처리하는 문제가 있었음
+
+* ffmpeg 으로 out_8M.ts 을 source 로 하고  -acodec copy -bsf:a aac_adtstoasc option 을 주고, rtmp 전송을 했을 때 
+asc 정보가 없는 audio message 를 보내는 문제가 있었음
+ 
+test 버전은 bitReader 를 사용해서  parsing 하다가 죽고, 
+이전 버전의 경우는 parsing 을 잘못하게 됨. 
+audio data 가 2 byte만 들어와도 handler 쪽으로 전달되기 때문에, 문제가 발생함.
+  - header parsing 을 하려면, 적어도 4byte 는 들어와야 함.
+
+문제 발생 시 로그 메시지...  ( 실제 서버에는 없는 로그를 추가했음)
+
+rtmp-module,0.2.7,2019-02-26,11:40:49.062822,Information,flv_message.cpp::flv_message::process_flv_es_message:125,,audiospecificconfig[AF 00]
+rtmp-module,0.2.7,2019-02-26,11:40:49.062867,Information,flv_message.cpp::flv_message::process_flv_es_message:142,,audiospecificconfig ,object_type[0], sample_rate[88200],channel_count[0]
+rtmp-module,0.2.7,2019-02-26,11:40:49.129531,Information,flv_message.cpp::flv_message::process_flv_es_message:125,,audiospecificconfig[AF 00 11 90]
+rtmp-module,0.2.7,2019-02-26,11:40:49.129555,Information,flv_message.cpp::flv_message::process_flv_es_message:142,,audiospecificconfig ,object_type[2], sample_rate[48000],channel_count[2]
+
+audio data 가 완성되지 않은 상태에서 audio parsing 을 하는 바람에 object_type, sample_rate, channel_count 에 버그가 있음.
+이 때 어떤 문제가 발생하는 지 코드 review 가 필요함. 
+
+
+기대 data 크기보다 data 전송이 되지 않는 경우, return 하는 코드가 필요함
+사실 get_aac_header 함수에서 return false 를 했어야 했는데, 부족한 data가 있던 상황에서도 
+그냥 pointer 를 연산을 하는 바람에 잘못된 data 를 구했음
+
+* 로그 상으로는 ffmpeg 이 message를 잘못 주는 것 같음. 첫 번째는 2byte 짜리를 주고, 두 번째에 4byte 를 주는 것 같음
+  만일 그렇다면 nginx 는 어떻게 처리될까?
+
+  nginx 의 로그를 살펴보니 ffmpeg 에서 보낸 AudioSpecificConfig 정보가 없는 length 2 짜리 message 를 AAC header 가 없다는 이유로 skip 해버린다는 걸 알 수 있다.
+  
+2019/02/26 13:42:40 [debug] 30172#0: *2 calling handler 3
+2019/02/26 13:42:40 [debug] 30172#0: *2 calling handler 4
+2019/02/26 13:42:40 [debug] 30172#0: *2 reusing formerly read data: 14
+2019/02/26 13:42:40 [debug] 30172#0: *2 RTMP bheader fmt=0 csid=4
+2019/02/26 13:42:40 [debug] 30172#0: *2 RTMP mheader fmt=0 audio (8) time=0+0 mlen=2 len=0 msid=1
+2019/02/26 13:42:40 [debug] 30172#0: *2 RTMP recv audio (8) csid=4 timestamp=0 mlen=2 msid=1 nbufs=1
+2019/02/26 13:42:40 [debug] 30172#0: *2 nhandlers: 5
+2019/02/26 13:42:40 [debug] 30172#0: *2 calling handler 0
+2019/02/26 13:42:40 [debug] 30172#0: *2 calling handler 1
+2019/02/26 13:42:40 [debug] 30172#0: *2 record:  skipping until AAC header
+2019/02/26 13:42:40 [debug] 30172#0: *2 calling handler 2
+2019/02/26 13:42:40 [debug] 30172#0: *2 live: audio packet timestamp=0
+2019/02/26 13:42:40 [debug] 30172#0: *2 RTMP prep audio (8) fmt=1 csid=6 timestamp=0 mlen=2 msid=1 nbufs=1
+
+한 참 후에 audio data message 가 다시 오는데, 이 때 AudioSpecificConfig 을 처리 한다. 
+
+28992829 2019/02/26 13:42:40 [debug] 30172#0: *2 RTMP bheader fmt=0 csid=4
+28992830 2019/02/26 13:42:40 [debug] 30172#0: *2 RTMP mheader fmt=0 audio (8) time=0+0 mlen=4 len=0 msid=1
+28992831 2019/02/26 13:42:40 [debug] 30172#0: *2 RTMP recv audio (8) csid=4 timestamp=0 mlen=4 msid=1 nbufs=1
+28992832 2019/02/26 13:42:40 [debug] 30172#0: *2 nhandlers: 5
+28992833 2019/02/26 13:42:40 [debug] 30172#0: *2 calling handler 0
+28992834 2019/02/26 13:42:40 [debug] 30172#0: *2 codec: aac header af001190
+28992835 2019/02/26 13:42:40 [debug] 30172#0: *2 codec: aac header profile=2, sample_rate=48000, chan_conf=2
+28992836 2019/02/26 13:42:40 [debug] 30172#0: *2 calling handler 1
+28992837 2019/02/26 13:42:40 [debug] 30172#0: *2 record:  writing AAC header
+28992838 2019/02/26 13:42:40 [debug] 30172#0: *2 record:  frame: mlen=4
+28992839 2019/02/26 13:42:40 [debug] 30172#0: *2 write: 12, 00007FFD9690343D, 11, 172606
+28992840 2019/02/26 13:42:40 [debug] 30172#0: *2 write: 12, 000055F181F69CC6, 4, 172617
+28992841 2019/02/26 13:42:40 [debug] 30172#0: *2 write: 12, 00007FFD9690343D, 4, 172621
+28992842 2019/02/26 13:42:40 [debug] 30172#0: *2 record:  frame: mlen=4
+28992843 2019/02/26 13:42:40 [debug] 30172#0: *2 write: 12, 00007FFD9690343D, 11, 172625
+28992844 2019/02/26 13:42:40 [debug] 30172#0: *2 write: 12, 000055F181EFE89C, 4, 172636
+28992845 2019/02/26 13:42:40 [debug] 30172#0: *2 write: 12, 00007FFD9690343D, 4, 172640
+28992846 2019/02/26 13:42:40 [debug] 30172#0: *2 calling handler 2
+28992847 2019/02/26 13:42:40 [debug] 30172#0: *2 live: audio packet timestamp=0
+28992848 2019/02/26 13:42:40 [debug] 30172#0: *2 RTMP prep audio (8) fmt=1 csid=6   timestamp=0 mlen=4 msid=1 nbufs=1
+
+ffmpeg 의 aac_adtstoasc option 의 의미 :
+Convert MPEG-2/4 AAC ADTS to an MPEG-4 Audio Specific Configuration bitstream.
+This filter creates an MPEG-4 AudioSpecificConfig from an MPEG-2/4 ADTS header and removes the ADTS header.
+This filter is required for example when copying an AAC stream from a raw ADTS AAC or an MPEG-TS container to MP4A-LATM, to an FLV file, or to MOV/MP4 files and related formats such as 3GP or M4A. Please note that it is auto-inserted for MP4A-LATM and MOV/MP4 and related formats.
+
+MPEG-TS 에서는 ADTS 를 시용하고, MPEG4 에서는 ASC 를 사용하는 것 같음
+소스가 MPEG-TS 나 raw ADTS AAC 를 MP4 나 FLV 로 바꿀 때 이 option 을 사용해야 하는 것 같음
+마지막 문장은 MP4 로 변환할때는 자동으로 이 option 이 들어간다는 이야기 같음
+
+RTMP 에서는 FLV format 을 사용하고 있어서 이 option 을 사용해야함
+
+
+ADTS : AudioDataTransportStFLV format 을 이 sample frequency index, channel configuratio함
+
+ ISO 13818-7 문서의 6.2.1 Fixed Header of ADTS의 Table 8
+Ahttps://wiki.multimedia.cx/index.php/ADTS
+
+
+*streamer 와 nginx 의 차이가 있는 부분 : 
+ nginx 의 rtmp-module 에는 audio timestamp 보정 하는 코드가 있음
+ 이전 frame과 현재 frame 간의 timestamp 값과의 차이가 hls_sync 설정 값 범위 내에 오는 경우, 
+ 보정값을 사용하고, 그렇지 않은 경우, timstamp 값을 사용하는 기능이 있음
+
+nginx 의 hls_sync 설정에 대한 설명:
+https://github.com/arut/nginx-rtmp-module/wiki/Directives#hls_sync
+
+hls_sync
+Syntax: hls_sync time
+Context: rtmp, server, application
+Sets HLS timestamp synchronization threshold. Default is 2ms. This feature prevents crackling noises after conversion from low-resolution RTMP (1KHz) to high-resolution MPEG-TS (90KHz)
+
+
+
+#2019-02-25
+ISO/IEC_14496-3 2005,2006 버전을 보았을 때는 
+audio specific config parsing 구현이 완전하진 않지만,  channel number 버그 말고 다른 부분에서 문제가 될 것 같지는 않음
+channel config 가 0 인 경우, channel number 구현이 안되어있음
+  
+MP4-3  Audio Specific Config parsing 구현 :
+google shaka package : 
+  * 미구현 :
+    - audio object type 0, 31 이상 구현없음
+  * 구현 : 
+    - channel_configuration 이 15 인 경우 구현있음
+    - channel_configuration 이 0 인 경우 구현있음
+
+nginx-rtmp-module :
+*  미구현 :
+  - audio object type 0, 31 구현없음
+  - audio object type 4 보다 큰 경우(31보다 큰 경우도 마찬가지 )  2로 치환함
+  - channel_configuration 이 15 인 경우 구현없음
+  - channel_configuration 이 0 인 경우 구현없음
+ * 구현 : 
+   - rtmp audio message header 의 time 값 x 90 을 pts 로 사용함. dts 는 따로 사용하지 않음 
+   - AAC frame size is 1024 라고 가정함
+  - ADTS header 를 만드는 구현이 있음
+  - 
+
+* nginx 와 streamer 의 차이 :
+  - AudioSpecificConfiguration parsing 부분에서는 크게 차이가 없어보임
+  
+  hls 만드는 부분에 
+  - nginx 에는 ADTS header 를 만드는 구현이 있고, 
+  - pts 를 바꾸어주는 구현이 있는데, 
+  - 이 부분은 steamer 의 hsl ingest 와 차이가 있는 지 살펴보아야 할 것 같음
+
+
+```cpp
+  est_pts = ctx->aframe_base + ctx->aframe_num * 90000 * 1024 / codec_ctx->sample_rate;
+  dpts = (int64_t) (est_pts - pts);
+  if (dpts <= (int64_t) hacf->sync * 90 && dpts >= (int64_t) hacf->sync * -90)
+  {
+    ctx->aframe_num++;
+    ctx->aframe_pts = est_pts;
+    return NGX_OK;
+  }
+  ctx->aframe_base = pts;
+```
+
+
+
+
+
 #2019-02-22
+
+ AAC AudioSpecificConfig  (ISO/IEC 14496-1 (MPEG-4 Systems)) 파싱 버그
+- 규격 버전에 따라서 달라지는 것 같기도 한데, 2 byte 인 경우(예전 버전?)도 있는 것 같았음
+
+parsingflv.cpp 
+get_aac_header
+
+- audio object type 31 의 경우, 제대로 된 spec 을 가지고 구현한 게 아니라 확실치 않음
+- audio object type 31 이상인 경우,  구현 없음
+- channel configuration 구현에는 8 channel 인데 7 channel 로 parsing 하는 버그
+- channel configuration 0 인 경우, channel number parsing 구현 안되어있음
+  - 규격에 따르면, program_config_element 를 parsing 해야하는 것 같음
+  - google shaka-package, 2018 에서 아직 지원하지 않는 형상인 것 같았음
+    https://github.com/google/shaka-packager/issues/387
+
+
 rtmp 다시 점검
 
 rtmp 의 payload 는flv file format 의 data 인데  flv header 는 제외된 형태입니다.
@@ -6,10 +414,95 @@ flv file format 에 대한 설명은
 
 참조:
 Adobe Flash Video File Format Specification 10.1.2.01
+
+Adobe Flash Video File Format Specification 10
+https://www.adobe.com/content/dam/acom/en/devnet/flv/video_file_format_spec_v10.pdf
+
 https://www.jianshu.com/p/e1e417eee2e7
+https://www.jianshu.com/p/0bff0fc2bf28
+
+ISO 14496-3:
+ftp://ftp.tnt.uni-hannover.de/pub/MPEG/audio/mpeg4/documents/w2803/w2803_n.pdf
+https://github.com/google/shaka-packager/blob/master/packager/media/codecs/aac_audio_specific_config.h
+https://wiki.multimedia.cx/index.php/MPEG-4_Audio
+http://read.pudn.com/downloads98/doc/comm/401153/14496/ISO_IEC_14496-3%20Part%203%20Audio/C036083E_SUB1.PDF
 
 
+AUDIODATA : 1byte
+SoundData : Nbyte
 
+AAC SoundData :
+  AACAUDIODATA :
+    AACPacketType : 1byte
+    Data : Nbyte :
+      if AACPacketType == 0 :
+        AudioSpecificConfig
+      else if AACPacketType == 1:
+        Raw AAC frame data
+
+The AudioSpecificConfig is explained in ISO 14496-3. Note that it is not the same as the
+contents of the esds box from an MP4/F4V file. This structure is more deeply embedded.
+
+* mp4 aac audio specific config
+  - 5 bits: object type
+  // if (object type == 31)
+  //     6 bits + 32: object type
+  // 4 bits: frequency(=sample rate) index
+  // if (frequency index == 15)
+  //     24 bits: frequency
+  // 4 bits: channel configuration
+  // var bits: AOT Specific Config
+
+ISO 14496-3
+``` cpp
+AudioSpecificConfig ()
+{
+  audioObjectType; // 5 blbf
+  samplingFrequencyIndex; //4 bslbf
+  if ( samplingFrequencyIndex==0xf )
+    samplingFrequency; //24 uimsbf
+    channelConfiguration; //4 bslbf
+  if ( audioObjectType == 1 || audioObjectType == 2 ||
+      audioObjectType == 3 || audioObjectType == 4 ||
+      audioObjectType == 6 || audioObjectType == 7 )
+    GASpecificConfig();
+  if ( audioObjectType == 8 )
+    CelpSpecificConfig();
+  if ( audioObjectType == 9 )
+    HvxcSpecificConfig();
+  if ( audioObjectType == 12 )
+    TTSSpecificConfig();
+  if ( audioObjectType == 13 || audioObjectType == 14 ||
+        audioObjectType == 15 || audioObjectType==16)
+    StructuredAudioSpecificConfig();
+  if ( audioObjectType == 17 || audioObjectType == 19 ||
+        audioObjectType == 20 || audioObjectType == 21 ||
+        audioObjectType == 22 || audioObjectType == 23 )
+    GASpecificConfig();
+  if ( audioObjectType == 24)
+    ErrorResilientCelpSpecificConfig();
+  if ( audioObjectType == 25)
+    ErrorResilientHvxcSpecificConfig();
+  if ( audioObjectType == 26 || audioObjectType == 27)
+    ParametricSpecificConfig();
+  if ( audioObjectType == 17 || audioObjectType == 19 ||
+        audioObjectType == 20 || audioObjectType == 21 ||
+        audioObjectType == 22 || audioObjectType == 23 ||
+        audioObjectType == 24 || audioObjectType == 25 ||
+        audioObjectType == 26 || audioObjectType == 27 ) {
+    epConfig; //2 bslbf
+    if ( epConfig == 2 || epConfig == 3 ) {
+      ErrorProtectionSpecificConfig();
+    }
+    if ( epConfig == 3 ) {
+      directMapping; //1 bslbf
+      if ( ! directMapping ) {
+        /* tbd */
+      }
+    }
+  }
+}
+```
 
 
 NOTE:
@@ -1152,8 +1645,6 @@ Adobe 문서에 따르면 OnMetaData 는 OnStatus 를 보내주어야 오는 것
 아래 문서를 보면, connect.success 만 되면 data가 올 것 같은데... test 상으로는 그렇지는 않은 것 같다.
 
 https://helpx.adobe.com/adobe-media-server/dev/adding-metadata-live-stream.html
-
-
 
 6.
 spec 을 보면 OnMetaData message 는 서버가 play 하거나 publish 할 때는 서버가 호출하게 되지만,

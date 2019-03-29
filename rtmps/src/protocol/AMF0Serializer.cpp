@@ -1,6 +1,6 @@
 #include "AMF0Serializer.hpp"
-#include "../common/StreamUtil.hpp"
 #include "../../../src/rtmpmodulelogger.h"
+#include "../common/StreamUtil.hpp"
 
 using namespace rtmp_protocol;
 
@@ -102,7 +102,8 @@ bool AMF0Serializer::write_short_string(std::ostream &stream,
   return true;
 }
 
-bool AMF0Serializer::read_number_4byte(std::istream &stream, unsigned int &value) {
+bool AMF0Serializer::read_number_4byte(std::istream &stream,
+                                       unsigned int &value) {
   if (!stream_util::check_redable_length(stream, 4)) return false;
   stream_util::read_uint(stream, value, true);
   return true;
@@ -221,41 +222,42 @@ bool AMF0Serializer::write_null(std::ostream &stream, size_t &writed) {
   return true;
 }
 
-// FIXME: 
+// FIXME:
 // AMF0_MIXED_ARRAY
 
 bool AMF0Serializer::consume_any(std::istream &stream) {
   AMF0Type::type data_type;
   if (!read_type(stream, data_type)) {
-    RTMPLOG(error) << "amf:object parsing fails" <<",amf:"<<data_type;
+    RTMPLOG(error) << "amf:object parsing fails"
+                   << ",amf:" << data_type;
     return false;
   }
-  RTMPLOG(debug) << "amf_type:" << data_type;
+   RTMPLOG(debug) << "amf_type:" << data_type;
   switch (data_type) {
     case AMF0Type::AMF0_BOOLEAN: {
       bool temp;
       bool ret = read_boolean(stream, temp, false);
-      RTMPLOG(debug) << "amf_bool_value:" << temp;
+       RTMPLOG(debug) << "amf_bool_value:" << temp;
       return ret;
     }
     case AMF0Type::AMF0_NULL: {
-      RTMPLOG(debug) << "amf_null_value:";
+       RTMPLOG(debug) << "amf_null_value:";
       return true;
     }
     case AMF0Type::AMF0_NUMBER: {
       double temp;
       bool ret = read_number(stream, temp, false);
-      RTMPLOG(debug) << "amf_number_value:" << temp;
+       RTMPLOG(debug) << "amf_number_value:" << temp;
       return ret;
     }
     case AMF0Type::AMF0_SHORT_STRING: {
       std::string temp;
       bool ret = read_short_string(stream, temp, false);
-      RTMPLOG(debug) << "amf_string_value:" << temp;
+       RTMPLOG(debug) << "amf_string_value:" << temp;
       return ret;
     }
     case AMF0Type::AMF0_UNDEFINED: {
-      RTMPLOG(debug) << "amf_undefined:";
+       RTMPLOG(debug) << "amf_undefined:";
       return true;
     }
     case AMF0Type::AMF0_OBJECT: {
@@ -268,9 +270,9 @@ bool AMF0Serializer::consume_any(std::istream &stream) {
           return false;
         }
         if (result) {
-          RTMPLOG(debug) << "amf_end_of_object:" << end_of_object_;
+           RTMPLOG(debug) << "amf_end_of_object:" << end_of_object_;
           return true;
-        }  
+        }
         consume_any_property(stream);
       }
       break;
@@ -278,21 +280,21 @@ bool AMF0Serializer::consume_any(std::istream &stream) {
     case AMF0Type::AMF0_MIXED_ARRAY: {
       unsigned int array_size;
       bool ret = read_number_4byte(stream, array_size);
-      RTMPLOG(debug) << "amf_mixed_array_size:" << array_size;
+       RTMPLOG(debug) << "amf_mixed_array_size:" << array_size;
 
-      // read AMF0_OBJECT      
+      // read AMF0_OBJECT
       while (true) {
         bool is_not_sufficent_stream_length;
         bool result = is_end_of_object(stream, is_not_sufficent_stream_length);
 
         if (is_not_sufficent_stream_length) {
-          RTMPLOG(error) << "amf_object parsing fails";
+           RTMPLOG(error) << "amf_object parsing fails";
           return false;
         }
         if (result) {
-          RTMPLOG(debug) << "amf_end_of_object:" << end_of_object_;
+           RTMPLOG(debug) << "amf_end_of_object:" << end_of_object_;
           return true;
-        }  
+        }
         consume_any_property(stream);
       }
       return true;
@@ -301,12 +303,11 @@ bool AMF0Serializer::consume_any(std::istream &stream) {
     case AMF0Type::AMF0_ARRAY: {
       unsigned int array_size;
       bool ret = read_number_4byte(stream, array_size);
-      RTMPLOG(debug) << "amf_array_size:" << array_size;
-      
-      
+       RTMPLOG(debug) << "amf_array_size:" << array_size;
+
       for (double i = 0; i < array_size; ++i) {
-        if (!consume_any(stream)) { 
-          return false;    
+        if (!consume_any(stream)) {
+          return false;
         }
       }
       return true;
@@ -314,13 +315,13 @@ bool AMF0Serializer::consume_any(std::istream &stream) {
     }
 
     case AMF0Type::AMF0_OBJECT_END: {
-      RTMPLOG(debug) << "amf_object_end:";
+       RTMPLOG(debug) << "amf_object_end:";
       return true;
       break;
     }
 
     default: {
-      RTMPLOG(debug) << "amf_type not supported. consume all";
+       RTMPLOG(debug) << "amf_type not supported. consume all";
       consume_until_end_of_object(stream);
       return true;
 
@@ -335,7 +336,7 @@ bool AMF0Serializer::consume_any_property(std::istream &stream) {
   std::string key;
   if (!read_short_string(stream, key, false)) return false;
 
-  RTMPLOG(debug)<< "amf_object_property_key:" << key;
+   RTMPLOG(debug) << "amf_object_property_key:" << key;
 
   if (!consume_any(stream)) return false;
 
@@ -351,7 +352,7 @@ bool AMF0Serializer::consume_full(std::istream &stream) {
   return true;
 }
 
-void AMF0Serializer::consume_until_end_of_object(std::istream &stream){
+void AMF0Serializer::consume_until_end_of_object(std::istream &stream) {
   bool error = false;
   while (is_end_of_object(stream, error) == false && error == false) {
     stream_util::change_relative_position_istream(stream, 1);
@@ -363,10 +364,9 @@ bool AMF0Serializer::read_mixed_array(std::istream &stream, AMFObject &obj) {
   std::string amfobj_name;
 
   double array_size;
-  if (read_number(stream, array_size, false) == false) { return false; }
-  RTMPLOG(debug) << "array_size: " << array_size;
+  if (read_number(stream, array_size, false) == false) {
+    return false;
+  }
+   RTMPLOG(debug) << "array_size: " << array_size;
   return not error;
 }
-
-
-

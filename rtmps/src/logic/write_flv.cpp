@@ -132,7 +132,7 @@ void write_flv_media_message_dump(
       flvfile.close();
     }
     {
-      // write audio dump
+      // write video dump
       boost::filesystem::path file_path("dump/" + stream_name +
                                         "/video_message_data");
       boost::filesystem::create_directories(file_path);

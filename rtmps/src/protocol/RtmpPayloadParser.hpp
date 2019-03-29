@@ -73,8 +73,8 @@ class RtmpPayloadParser {
     unsigned int last_msg_timestamp_delta{0};
     uint64_t last_msg_abs_timestamp{0};
   } channel_info;
-
-  channel_info channels_[MAX_CHANNEL_COUNT];
+  
+  std::map<uint32_t, channel_info> channels_;
 
   ControlMsgParser control_msg_parser_;
   CommandMsgParser command_msg_parser_;

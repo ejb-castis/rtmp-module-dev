@@ -52,20 +52,18 @@ RtmpPayloadParseResult::type RtmpPayloadParser::parse_payload(
       // rollover
       {
         // 마지막 message 64 bit timestamp 저장
-        channels_[cs_id].last_msg_abs_timestamp =
-        sna::unroll(  
-          sna::serialnumber(recv_info->first_chunk_header->timestamp_),
-          sna::serialnumber(context_->last_message_timestamp_),
-          context_->rollover_count_
-          );
+        channels_[cs_id].last_msg_abs_timestamp = sna::unroll(
+            sna::serialnumber(recv_info->first_chunk_header->timestamp_),
+            sna::serialnumber(context_->last_message_timestamp_),
+            context_->rollover_count_);
 
         // 현재 message 64 bit timestamp 64 저장
         recv_info->first_chunk_header->abs_timestamp_ =
-          channels_[cs_id].last_msg_abs_timestamp;
+            channels_[cs_id].last_msg_abs_timestamp;
 
         // 마지막 message 32 bit timestamp 저장
         context_->last_message_timestamp_ =
-          recv_info->first_chunk_header->timestamp_;
+            recv_info->first_chunk_header->timestamp_;
       }
 
       channels_[cs_id].last_msg_timestamp_delta =
@@ -74,35 +72,32 @@ RtmpPayloadParseResult::type RtmpPayloadParser::parse_payload(
       channels_[cs_id].last_msg_timestamp =
           recv_info->first_chunk_header->timestamp_;
 
-
     } else if (recv_info->first_chunk_header->format_type_ ==
                RtmpHeaderFormat::SAME_STREAM) {
-
       // rollover
       {
         // 마지막 message 64 bit timestamp delta, timestamp 처리
-        sna::serialnumber s = 
-          sna::add(
-            sna::serialnumber(channels_[cs_id].last_msg_timestamp),
-            recv_info->first_chunk_header->timestamp_delta_,
-            context_->rollover_count_);
+        sna::serialnumber s =
+            sna::add(sna::serialnumber(channels_[cs_id].last_msg_timestamp),
+                     recv_info->first_chunk_header->timestamp_delta_,
+                     context_->rollover_count_);
 
-        // 마지막 message 64 bit timestamp 저장        
+        // 마지막 message 64 bit timestamp 저장
         channels_[cs_id].last_msg_abs_timestamp =
-        sna::unroll(s, context_->rollover_count_);
+            sna::unroll(s, context_->rollover_count_);
 
         // 현재 message 64 bit timestamp 64 저장
         recv_info->first_chunk_header->abs_timestamp_ =
-          channels_[cs_id].last_msg_abs_timestamp;
+            channels_[cs_id].last_msg_abs_timestamp;
 
         // 마지막 message 32 bit timestamp 저장
-        context_->last_message_timestamp_ = static_cast<uint32_t>(s.number);    
+        context_->last_message_timestamp_ = static_cast<uint32_t>(s.number);
       }
 
       channels_[cs_id].last_msg_timestamp_delta =
           recv_info->first_chunk_header->timestamp_delta_;
-      
-      //FIXME: 32 bit 범위를 넘어갈 수 있음
+
+      // FIXME: 32 bit 범위를 넘어갈 수 있음
       channels_[cs_id].last_msg_timestamp +=
           channels_[cs_id].last_msg_timestamp_delta;
 
@@ -114,34 +109,32 @@ RtmpPayloadParseResult::type RtmpPayloadParser::parse_payload(
       // rollover
       {
         // 마지막 message 64 bit timestamp delta, timestamp 처리
-        sna::serialnumber s = 
-          sna::add(
-            sna::serialnumber(channels_[cs_id].last_msg_timestamp),
-            recv_info->first_chunk_header->timestamp_delta_,
-            context_->rollover_count_);
+        sna::serialnumber s =
+            sna::add(sna::serialnumber(channels_[cs_id].last_msg_timestamp),
+                     recv_info->first_chunk_header->timestamp_delta_,
+                     context_->rollover_count_);
 
-        // 마지막 message 64 bit timestamp 저장        
+        // 마지막 message 64 bit timestamp 저장
         channels_[cs_id].last_msg_abs_timestamp =
-        sna::unroll(s, context_->rollover_count_);
+            sna::unroll(s, context_->rollover_count_);
 
         // 현재 message 64 bit timestamp 64 저장
         recv_info->first_chunk_header->abs_timestamp_ =
-          channels_[cs_id].last_msg_abs_timestamp;
+            channels_[cs_id].last_msg_abs_timestamp;
 
         // 마지막 message 32 bit timestamp 저장
-        context_->last_message_timestamp_ = static_cast<uint32_t>(s.number);    
+        context_->last_message_timestamp_ = static_cast<uint32_t>(s.number);
       }
 
       channels_[cs_id].last_msg_timestamp_delta =
           recv_info->first_chunk_header->timestamp_delta_;
 
-      //FIXME: 32 bit 범위를 넘어갈 수 있음
+      // FIXME: 32 bit 범위를 넘어갈 수 있음
       channels_[cs_id].last_msg_timestamp +=
           channels_[cs_id].last_msg_timestamp_delta;
 
       recv_info->first_chunk_header->timestamp_ =
           channels_[cs_id].last_msg_timestamp;
-
 
     } else if (recv_info->first_chunk_header->format_type_ ==
                RtmpHeaderFormat::CONTINUATION) {
@@ -154,30 +147,29 @@ RtmpPayloadParseResult::type RtmpPayloadParser::parse_payload(
       // rollover
       {
         // 마지막 message 64 bit timestamp delta, timestamp 처리
-        sna::serialnumber s = 
-          sna::add(
-            sna::serialnumber(channels_[cs_id].last_msg_timestamp),
-            channels_[cs_id].last_msg_timestamp_delta,
-            context_->rollover_count_);
+        sna::serialnumber s =
+            sna::add(sna::serialnumber(channels_[cs_id].last_msg_timestamp),
+                     channels_[cs_id].last_msg_timestamp_delta,
+                     context_->rollover_count_);
 
-        // 마지막 message 64 bit timestamp 저장        
+        // 마지막 message 64 bit timestamp 저장
         channels_[cs_id].last_msg_abs_timestamp =
-        sna::unroll(s, context_->rollover_count_);
+            sna::unroll(s, context_->rollover_count_);
 
         // 현재 message 64 bit timestamp 64 저장
         recv_info->first_chunk_header->abs_timestamp_ =
-          channels_[cs_id].last_msg_abs_timestamp;
+            channels_[cs_id].last_msg_abs_timestamp;
 
         // 마지막 message 32 bit timestamp 저장
-        context_->last_message_timestamp_ = static_cast<uint32_t>(s.number);    
+        context_->last_message_timestamp_ = static_cast<uint32_t>(s.number);
       }
 
       recv_info->first_chunk_header->timestamp_delta_ =
           channels_[cs_id].last_msg_timestamp_delta;
       channels_[cs_id].last_msg_timestamp_delta =
           recv_info->first_chunk_header->timestamp_delta_;
-      
-      //FIXME: 32 bit 범위를 넘어갈 수 있음
+
+      // FIXME: 32 bit 범위를 넘어갈 수 있음
       channels_[cs_id].last_msg_timestamp +=
           channels_[cs_id].last_msg_timestamp_delta;
 
@@ -204,13 +196,14 @@ RtmpPayloadParseResult::type RtmpPayloadParser::parse_payload(
   const unsigned int this_msg_size =
       (need_size > recv_chunk_size_) ? recv_chunk_size_ : need_size;
 
-  // RTMPLOG(debug) << "message length: " << msg_length << ", current msg_length
-  // - previously received_length: " << need_size << ", this msg size:" <<
-  // this_msg_size << ", buf size: "<< buf_size;
+  RTMPLOG(debug) << "message length: " << msg_length
+                 << ", current msg_length- previously received_length: "
+                 << need_size << ", this msg size:" << this_msg_size
+                 << ", buf size: " << buf_size;
 
   if (buf_size >= this_msg_size) {
-    // RTMPLOG(debug) << "read payload from buf(size: " << buf_size << ") READ
-    // stream: size:" <<this_msg_size ;
+    RTMPLOG(debug) << "read payload from buf(size: " << buf_size
+                   << ") READ stream : size: " << this_msg_size;
 
     stream.read(
         reinterpret_cast<char*>(recv_info->recv_buf + recv_info->recv_length),
@@ -237,9 +230,10 @@ RtmpPayloadParseResult::type RtmpPayloadParser::parse_payload(
     readed_size = this_msg_size;
 
   } else {
-    // RTMPLOG(debug) << "WAITING_MORE_PAYLOAD_DATA : " << "current buf size: "
-    // << buf_size << ", until buf size is greater than message length: " <<
-    // this_msg_size ;
+    RTMPLOG(debug) << "WAITING_MORE_PAYLOAD_DATA : "
+                   << "current buf size: " << buf_size
+                   << ", until buf size is greater than message length: "
+                   << this_msg_size;
     return RtmpPayloadParseResult::WAITING_MORE_PAYLOAD_DATA;
   }
 

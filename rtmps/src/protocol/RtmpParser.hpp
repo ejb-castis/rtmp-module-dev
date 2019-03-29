@@ -5,7 +5,7 @@
 #include "RtmpHeaderParser.hpp"
 #include "RtmpPayloadParser.hpp"
 
-#define DEFAULT_WIN_ACK_SIZE 131072
+#define DEFAULT_WIN_ACK_SIZE 5000000
 
 namespace rtmp_protocol {
 

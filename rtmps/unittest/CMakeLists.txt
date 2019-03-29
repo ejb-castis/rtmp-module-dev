@@ -3,6 +3,9 @@ find_package(GTest REQUIRED)
 include_directories(${GTEST_INCLUDE_DIRS})
 project (rtmp_unittest)
 
+set(Boost_USE_STATIC_LIBS ON)
+find_package(Boost 1.66 REQUIRED COMPONENTS system coroutine thread context regex filesystem log_setup log program_options REQUIRED)
+
 set(TEST_SRCS
   parsinghflv_test.cpp
   general_test.cpp
@@ -10,7 +13,7 @@ set(TEST_SRCS
 
 ################################################################################
 
-ADD_DEFINITIONS(-Wall -g -fno-strict-aliasing -D_LARGEFILE64_SOURCE -D_BARBADOS_=1 -D_REENTRANT -D_FILE_OFFSET_BITS=64)
+ADD_DEFINITIONS(-Wall -g -fno-strict-aliasing -D_LARGEFILE64_SOURCE -D_BARBADOS_=1 -D_REENTRANT -D_FILE_OFFSET_BITS=64 )
 add_compile_options(-DBOOST_COROUTINES_NO_DEPRECATION_WARNING=1)
 add_executable(${PROJECT_NAME} ${TEST_SRCS})
 set_target_properties(${PROJECT_NAME} PROPERTIES COMPILE_FLAGS "--coverage -std=c++11")

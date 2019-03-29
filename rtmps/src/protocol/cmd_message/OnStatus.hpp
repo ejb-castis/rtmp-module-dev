@@ -43,9 +43,11 @@ class OnStatusCode {
   static std::string get_description(type code, std::string& stream_name) {
     switch (code) {
       case ON_STATUS_CODE_PUBLISH_START: {
-        std::string begin(ON_STATUS_STR_DESCR_PUBLISH_START_BEGIN);
-        std::string end(ON_STATUS_STR_DESCR_PUBLISH_START_END);
-        return begin + stream_name + end;
+        // std::string begin(ON_STATUS_STR_DESCR_PUBLISH_START_BEGIN);
+        // std::string end(ON_STATUS_STR_DESCR_PUBLISH_START_END);
+        // return begin + stream_name + end;
+
+        return "Start publishing";
       }
       case ON_STATUS_CODE_PLAY_START: {
         return ON_STATUS_STR_DESCR_PLAY_START;

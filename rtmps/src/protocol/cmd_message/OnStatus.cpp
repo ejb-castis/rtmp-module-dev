@@ -33,10 +33,10 @@ size_t OnStatus::write_body_payload(std::ostream& stream) {
   amf0.write_short_string(stream, code_val, true, writed);
   amf0.write_object_key(stream, description, writed);
   amf0.write_short_string(stream, description_val, true, writed);
-  amf0.write_object_key(stream, details, writed);
-  amf0.write_short_string(stream, stream_name_, true, writed);
-  amf0.write_object_key(stream, clientid, writed);
-  amf0.write_short_string(stream, client_id_, true, writed);
+  // amf0.write_object_key(stream, details, writed);
+  // amf0.write_short_string(stream, stream_name_, true, writed);
+  // amf0.write_object_key(stream, clientid, writed);
+  // amf0.write_short_string(stream, client_id_, true, writed);
   amf0.write_end_of_object(stream, writed);
 
   // writed += 1;

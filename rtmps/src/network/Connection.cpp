@@ -151,7 +151,7 @@ void Connection::handle_read(const boost::system::error_code& e,
     request_streambuf_.commit(bytes_transferred);
     std::size_t buffer_size = request_streambuf_.size();
 
-    //RTMPLOGF(debug,"read. connection[%1%],bytes_transferred[%2%],buffer_size[%3%]", id_,bytes_transferred,buffer_size);
+    RTMPLOGF(debug,"read. connection[%1%],bytes_transferred[%2%],buffer_size[%3%]", id_,bytes_transferred,buffer_size);
 
     std::istream request_stream(&request_streambuf_);
 
